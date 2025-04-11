@@ -69,7 +69,39 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 
 *   **Transport:** Use `net/http` to create an HTTP server. A central handler will parse incoming requests, identify the JSON-RPC method, and route to specific method handlers.
 *   **JSON-RPC Handling:** Implement logic to decode JSON-RPC requests, validate parameters against the spec, call the appropriate Go handler function, and encode the response (or error) back into JSON-RPC format.
-*   **Method Handlers:** Functions like `handleSendTask`, `handleGetTask`, `handleCancelTask`, `handleSetPushNotification`, `handleGetPushNotification`. These will interact with the `TaskManager`.
+*   **Task Handling (`TaskHandler`):** Instead of simple method handlers, define a core `TaskHandler` interface or function type responsible for the application-specific logic of executing a task. This handler receives context and yields updates. The server's JSON-RPC method handlers (`handleSendTask`, etc.) will primarily validate requests, interact with the `TaskManager`, invoke the appropriate `TaskHandler`, consume its yielded updates, and manage SSE/response formatting.
+    *   **Proposed Go Interface/Types:**
+        ```go
+        // TaskContext provides context to the TaskHandler.
+        type TaskContext struct {
+            Task         a2a.Task          // Snapshot of task state (pass a copy)
+            UserMessage  a2a.Message       // Triggering message
+            History      []a2a.Message     // Snapshot of history (pass a copy)
+            // Cancellation is checked via the context.Context passed to the handler
+        }
+
+        // TaskYieldUpdate represents status or artifact updates yielded by a handler.
+        type TaskYieldUpdate interface {
+            isTaskYieldUpdate() // Marker method
+        }
+
+        // StatusUpdate represents a status change yielded by the handler.
+        // The server will add the timestamp.
+        type StatusUpdate struct {
+            State   a2a.TaskState
+            Message *a2a.Message // Optional agent message accompanying the status
+        }
+        func (s StatusUpdate) isTaskYieldUpdate() {}
+
+        // For yielding artifacts, the handler can yield the a2a.Artifact struct directly.
+        // The server will check the type received from the channel.
+        // Example: yieldChannel <- *myNewArtifact
+
+        // TaskHandler defines the function signature for task execution logic.
+        // It receives context and returns a channel for yielding updates and an error.
+        // Closing the channel indicates completion.
+        type TaskHandler func(ctx context.Context, taskContext TaskContext) (<-chan TaskYieldUpdate, error)
+        ```
 *   **Task Management (`TaskManager`):**
     *   Define an interface (`TaskManager`) for creating, retrieving, updating, and cancelling tasks.
     *   Provide a default in-memory implementation using maps and mutexes/channels for concurrency control.
