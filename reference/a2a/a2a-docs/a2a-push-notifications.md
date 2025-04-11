@@ -1,18 +1,18 @@
 ## [Remote Agent to Client Updates](https://google.github.io/A2A/#/topics/push_notifications?id=remote-agent-to-client-updates)
 
--   [Remote Agent to Client Updates](https://google.github.io/A2A/#/topics/push_notifications?id=remote-agent-to-client-updates)
-    -   [Connected](https://google.github.io/A2A/#/topics/push_notifications?id=connected)
-        -   [Disconnected](https://google.github.io/A2A/#/topics/push_notifications?id=disconnected)
-        -   [Setting Task Notifications](https://google.github.io/A2A/#/topics/push_notifications?id=setting-task-notifications)
-        -   [Agent Security](https://google.github.io/A2A/#/topics/push_notifications?id=agent-security)
-        -   [Notification Receiver Security](https://google.github.io/A2A/#/topics/push_notifications?id=notification-receiver-security)
-            -   [Asymmetric keys](https://google.github.io/A2A/#/topics/push_notifications?id=asymmetric-keys)
-            -   [Symmetric keys](https://google.github.io/A2A/#/topics/push_notifications?id=symmetric-keys)
-            -   [OAuth](https://google.github.io/A2A/#/topics/push_notifications?id=oauth)
-            -   [Bearer Token](https://google.github.io/A2A/#/topics/push_notifications?id=bearer-token)
-        -   [Other Considerations](https://google.github.io/A2A/#/topics/push_notifications?id=other-considerations)
-            -   [Replay Prevention](https://google.github.io/A2A/#/topics/push_notifications?id=replay-prevention)
-            -   [Key Rotation](https://google.github.io/A2A/#/topics/push_notifications?id=key-rotation)
+- [Remote Agent to Client Updates](https://google.github.io/A2A/#/topics/push_notifications?id=remote-agent-to-client-updates)
+  - [Connected](https://google.github.io/A2A/#/topics/push_notifications?id=connected)
+    - [Disconnected](https://google.github.io/A2A/#/topics/push_notifications?id=disconnected)
+    - [Setting Task Notifications](https://google.github.io/A2A/#/topics/push_notifications?id=setting-task-notifications)
+    - [Agent Security](https://google.github.io/A2A/#/topics/push_notifications?id=agent-security)
+    - [Notification Receiver Security](https://google.github.io/A2A/#/topics/push_notifications?id=notification-receiver-security)
+      - [Asymmetric keys](https://google.github.io/A2A/#/topics/push_notifications?id=asymmetric-keys)
+      - [Symmetric keys](https://google.github.io/A2A/#/topics/push_notifications?id=symmetric-keys)
+      - [OAuth](https://google.github.io/A2A/#/topics/push_notifications?id=oauth)
+      - [Bearer Token](https://google.github.io/A2A/#/topics/push_notifications?id=bearer-token)
+    - [Other Considerations](https://google.github.io/A2A/#/topics/push_notifications?id=other-considerations)
+      - [Replay Prevention](https://google.github.io/A2A/#/topics/push_notifications?id=replay-prevention)
+      - [Key Rotation](https://google.github.io/A2A/#/topics/push_notifications?id=key-rotation)
 
 Some tasks can take more than seconds. They can take minutes, or hours, or even days (_"ship a sample to my client in Florida and notify me when it arrives"_). A2A agents need to communicate over long periods of time. This includes while they are connected and not connected.
 
@@ -36,10 +36,9 @@ Clients can check whether an agent supports streaming and pushNotifications capa
 
 The agent can use below methods to get updates about task execution:
 
-1.  **Persistent Connection**: Clients can establish a persistent connection with the agent using HTTP + Server-sent events. The agent can then send task updates using those connections per client.
+1. **Persistent Connection**: Clients can establish a persistent connection with the agent using HTTP + Server-sent events. The agent can then send task updates using those connections per client.
 
-2.  **Push Notifications**: Agents can send the latest full Task object payload to client specified push notification URL. This is similar to webhooks on some platforms. Clients can set notifications for their tasks whether they have subscribed to a Task or not. Agents should send a notification when Agent has processed a task to a stopping state like "completed", "input-required" etc and fully generated state associated message and artifacts.
-
+2. **Push Notifications**: Agents can send the latest full Task object payload to client specified push notification URL. This is similar to webhooks on some platforms. Clients can set notifications for their tasks whether they have subscribed to a Task or not. Agents should send a notification when Agent has processed a task to a stopping state like "completed", "input-required" etc and fully generated state associated message and artifacts.
 
 Clients can set notification info for their tasks whether they have subscribed to a Task or not. Agents should send a notification when Agent sees it appropriate to notify the client. One paradigm could be to send a notification when agent has processed a task to a stopping state like "completed", "input-required" etc and fully generated state associated message and artifacts.
 
@@ -159,15 +158,15 @@ interface TaskPushNotificationConfig {
 
 Agents should not blindly trust the push notification URL specified by the client. Some commonly used practices are as below:
 
-1.  They should verify the push notification URL by issuing a GET challenge request.
+1. They should verify the push notification URL by issuing a GET challenge request.
 
-    -   The challenge request can be the same push notification URL but with a validationToken provided either as a URL query param or a header.
+    - The challenge request can be the same push notification URL but with a validationToken provided either as a URL query param or a header.
 
-    -   The notification service (or the client in simple cases) should respond to challenge request by returning the same validationToken.
+    - The notification service (or the client in simple cases) should respond to challenge request by returning the same validationToken.
 
-    -   This seems simple but it helps avoid tricking remote agent into DDOS-ing a URL by a malicious client.
+    - This seems simple but it helps avoid tricking remote agent into DDOS-ing a URL by a malicious client.
 
-    -   Agents can issue this challenge request one-time when the push notification url is registered or keep checking this URL periodically.
+    - Agents can issue this challenge request one-time when the push notification url is registered or keep checking this URL periodically.
 
         ```
         GET https://abc.com/callback-path?validationToken=randomString
@@ -181,10 +180,10 @@ Agents should not blindly trust the push notification URL specified by the clien
 
         An example of such check has been added in method `set_push_notification_info` of [LangGraph](https://github.com/google/A2A/blob/main/samples/python/agents/langgraph/task_manager.py) and [CLI Push listener](https://github.com/google/A2A/blob/main/samples/python/hosts/cli/push_notification_listener.py)
 
-2.  To further verify the identity of the notification service, it can be asked to sign the above validationToken using a pre-determined secret.
+2. To further verify the identity of the notification service, it can be asked to sign the above validationToken using a pre-determined secret.
 
-    -   The secret could be generated by the agent, specifically for this challenge request.
-    -   Or if the notification service and agent use a symmetric shared key for authentication, the same key can be used by notification service to sign the validationToken.
+    - The secret could be generated by the agent, specifically for this challenge request.
+    - Or if the notification service and agent use a symmetric shared key for authentication, the same key can be used by notification service to sign the validationToken.
 
 ## [Notification Receiver Security](https://google.github.io/A2A/#/topics/push_notifications?id=notification-receiver-security)
 
@@ -196,10 +195,10 @@ An example of push notifications using JWT + JWKS using assymetric keys has been
 
 A pair of private and public keys can be generated using ECDSA, RSA etc. These can be generated by the notification server or the remote agent.
 
-1.  If the key pair is generated by the notification server, (ex. APNS), the private key needs to be supplied to the agent. The notification server should keep the public key to verify incoming request payloads signed by the agent using the private key.
-2.  If the key pair is generated by the agent. Then there can be two options:
-    -   The public key is manually provided to the Notification Receiver.
-    -   Or the public keys can be provided by the agent through JWKS protocol.
+1. If the key pair is generated by the notification server, (ex. APNS), the private key needs to be supplied to the agent. The notification server should keep the public key to verify incoming request payloads signed by the agent using the private key.
+2. If the key pair is generated by the agent. Then there can be two options:
+    - The public key is manually provided to the Notification Receiver.
+    - Or the public keys can be provided by the agent through JWKS protocol.
 
 Agents can sign request payload using the private key and provide the request signature as a header. Or they can use JWT protocol to generate a token and provide that as a signature. Benefit of JWT protocol would also be that it standardises common fields like keyId, request timestamp.
 

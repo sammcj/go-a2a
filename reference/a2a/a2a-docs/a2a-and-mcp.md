@@ -1,11 +1,5 @@
 **TLDR;** Agentic applications need both A2A and MCP. We recommend MCP for tools and A2A for agents.
 
--   [A2A ❤️ MCP](https://google.github.io/A2A/#/topics/a2a_and_mcp.md?id=a2a--mcp)
--   [Why Protocols?](https://google.github.io/A2A/#/topics/a2a_and_mcp.md?id=why-protocols)
--   [Complementary](https://google.github.io/A2A/#/topics/a2a_and_mcp.md?id=complementary)
--   [Example](https://google.github.io/A2A/#/topics/a2a_and_mcp.md?id=example)
--   [Intersection](https://google.github.io/A2A/#/topics/a2a_and_mcp.md?id=intersection)
-
 ## [Why Protocols?](https://google.github.io/A2A/#/topics/a2a_and_mcp?id=why-protocols)
 
 Standard protocols are essential for enabling agentic interoperability, particularly in connecting agents to external systems. This is critical in two interconnected areas of innovation: Tools and Agents.
@@ -34,3 +28,5 @@ Now let's model the shop employees as AI agents:
 ## [Intersection](https://google.github.io/A2A/#/topics/a2a_and_mcp?id=intersection)
 
 We recommend that applications model A2A agents as MCP resources (represented by their [AgentCard](https://google.github.io/A2A/#/documentation?id=agent-card)). The frameworks can then use A2A to communicate with their user, the remote agents, and other agents.
+
+![a2a-mcp](a2a-mcp.png)
