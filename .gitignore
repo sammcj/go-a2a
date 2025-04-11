@@ -1,0 +1,16 @@
+**/bin
+**/build
+**/.vscode
+**/node_modules
+**/dist
+**/coverage
+**/out
+**/*.log
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/*.tmp
+**/tmp
+**/.env
+**/.DS_Store
+**/.idea
