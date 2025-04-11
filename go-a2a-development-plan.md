@@ -68,9 +68,37 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 ## 5. Server Implementation (`server/`)
 
 *   **Transport:** Use `net/http` to create an HTTP server. A central handler will parse incoming requests, identify the JSON-RPC method, and route to specific method handlers.
-*   **JSON-RPC Handling:** Implement logic to decode JSON-RPC requests, validate parameters against the spec, call the appropriate Go handler function, and encode the response (or error) back into JSON-RPC format.
-*   **Task Handling (`TaskHandler`):** Instead of simple method handlers, define a core `TaskHandler` interface or function type responsible for the application-specific logic of executing a task. This handler receives context and yields updates. The server's JSON-RPC method handlers (`handleSendTask`, etc.) will primarily validate requests, interact with the `TaskManager`, invoke the appropriate `TaskHandler`, consume its yielded updates, and manage SSE/response formatting.
-    *   **Proposed Go Interface/Types:**
+*   **JSON-RPC Handling & Delegation:** The server's central HTTP handler will decode incoming JSON-RPC requests, perform basic validation (JSON structure, method name), and then delegate the request to the corresponding method on the configured `TaskManager` interface (e.g., `taskManager.OnGetTask(ctx, params)`). The server is responsible for encoding the `TaskManager`'s response (or error) back into the appropriate JSON-RPC format (standard JSON or SSE).
+*   **Task Management (`TaskManager` Interface):** This interface becomes the core logic hub. It should define methods for each A2A operation:
+    ```go
+    type TaskManager interface {
+        // Handles non-streaming task send/resume.
+        OnSendTask(ctx context.Context, params *a2a.TaskSendParams) (*a2a.Task, error)
+
+        // Handles streaming task send/resume. Returns a channel for updates.
+        OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan TaskYieldUpdate, error)
+
+        // Handles task retrieval.
+        OnGetTask(ctx context.Context, params *a2a.TaskQueryParams) (*a2a.Task, error)
+
+        // Handles task cancellation.
+        OnCancelTask(ctx context.Context, params *a2a.TaskIdParams) (*a2a.Task, error)
+
+        // Handles setting push notification config.
+        OnSetTaskPushNotification(ctx context.Context, params *a2a.TaskPushNotificationConfig) (*a2a.TaskPushNotificationConfig, error)
+
+        // Handles getting push notification config.
+        OnGetTaskPushNotification(ctx context.Context, params *a2a.TaskIdParams) (*a2a.TaskPushNotificationConfig, error)
+
+        // Handles resubscribing to a task stream.
+        OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan TaskYieldUpdate, error)
+
+        // (Potentially other internal methods for state management)
+    }
+    ```
+    *   The *implementation* of this interface (e.g., `InMemoryTaskManager`) will contain the detailed logic for managing task state, history, artifacts, invoking the application-specific `TaskHandler` function for `OnSendTask`/`OnSendTaskSubscribe`, managing SSE channels, and handling persistence.
+*   **Application Logic (`TaskHandler` Function):** The application developer provides a function matching the `TaskHandler` signature, which is used by the `TaskManager` implementation to execute the core agent/tool logic.
+    *   **Refined Go Types (within `server` package):**
         ```go
         // TaskContext provides context to the TaskHandler.
         type TaskContext struct {
@@ -97,13 +125,15 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
         // The server will check the type received from the channel.
         // Example: yieldChannel <- *myNewArtifact
 
-        // TaskHandler defines the function signature for task execution logic.
+        // TaskHandler defines the function signature for application-specific task execution logic.
+        // It's invoked by the TaskManager implementation.
         // It receives context and returns a channel for yielding updates and an error.
         // Closing the channel indicates completion.
         type TaskHandler func(ctx context.Context, taskContext TaskContext) (<-chan TaskYieldUpdate, error)
         ```
-*   **Task Management (`TaskManager`):**
-    *   Define an interface (`TaskManager`) for creating, retrieving, updating, and cancelling tasks.
+*   **Task Management (`TaskManager` Implementation):**
+    *   The default `InMemoryTaskManager` implementation will manage task state (maps, mutexes), history, artifacts, and persistence.
+    *   It will invoke the user-provided `TaskHandler` when processing `OnSendTask` or `OnSendTaskSubscribe`.
     *   Provide a default in-memory implementation using maps and mutexes/channels for concurrency control.
     *   Manage task state transitions (`submitted` -> `working` -> `input-required` -> `completed`/`failed`/`canceled`).
     *   Store task history and artifacts.
