@@ -176,12 +176,13 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 ## 9. Roadmap / Next Steps
 
 1.  **Phase 1: Core Types & Basic Client/Server:**
-    *   Define all core Go structs (`a2a.go`).
-    *   Implement basic HTTP server with JSON-RPC request/response handling.
-    *   Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth.
-    *   Implement in-memory `TaskManager`.
-    *   Implement Agent Card serving.
-    *   Basic unit tests.
+    *   ✅ Define all core Go structs (`a2a.go`).
+    *   ✅ Define A2A specific error types (`errors.go`).
+    *   ✅ Implement basic HTTP server with JSON-RPC request/response handling (`server/server.go`, `server/handler.go`).
+    *   ✅ Implement in-memory `TaskManager` (`server/task_manager.go`).
+    *   ✅ Implement Agent Card serving (`server/agent_card.go`).
+    *   ⬜ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth.
+    *   ⬜ Basic unit tests.
 2.  **Phase 2: SSE Implementation:**
     *   Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
     *   Add client-side SSE handling.
