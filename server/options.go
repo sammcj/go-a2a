@@ -1,16 +1,17 @@
 package server
 
 import (
-	"github.com/sammcj/go-a2a"
+	"github.com/sammcj/go-a2a/a2a"
 )
 
 // Config holds the configuration for the A2A server.
 type Config struct {
-	ListenAddress string       // Address to listen on (e.g., ":8080")
-	A2APathPrefix string       // Path prefix for A2A endpoints (e.g., "/a2a")
+	ListenAddress string         // Address to listen on (e.g., ":8080")
+	A2APathPrefix string         // Path prefix for A2A endpoints (e.g., "/a2a")
 	AgentCard     *a2a.AgentCard // The agent card describing this agent
-	TaskManager   TaskManager  // The task manager implementation
-	TaskHandler   TaskHandler  // The application-specific task handler logic
+	AgentCardPath string         // Path to serve the agent card (e.g., "/.well-known/agent.json")
+	TaskManager   TaskManager    // The task manager implementation
+	TaskHandler   TaskHandler    // The application-specific task handler logic
 	// TODO: Add fields for TLS config, middleware, SSE config, etc.
 }
 
@@ -20,8 +21,9 @@ type Option func(*Config)
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() Config {
 	return Config{
-		ListenAddress: ":8080", // Default listen address
-		A2APathPrefix: "/a2a",  // Default A2A path prefix
+		ListenAddress: ":8080",                   // Default listen address
+		A2APathPrefix: "/a2a",                    // Default A2A path prefix
+		AgentCardPath: DefaultAgentCardPath,      // Default agent card path
 		// AgentCard is required, must be provided via WithAgentCard
 		// TaskManager defaults to InMemoryTaskManager if TaskHandler is provided
 		// TaskHandler is required, must be provided via WithTaskHandler
