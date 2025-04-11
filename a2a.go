@@ -192,13 +192,6 @@ type JSONRPCResponse struct {
 	ID      interface{} `json:"id"` // Should match the request ID
 }
 
-// JSONRPCError represents a JSON-RPC error object.
-type JSONRPCError struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
 // --- Specific Method Params/Results (Examples - To be expanded) ---
 
 // TaskSendParams represents the parameters for the tasks/send method.
