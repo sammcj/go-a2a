@@ -181,7 +181,7 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
     *   ✅ Implement basic HTTP server with JSON-RPC request/response handling (`server/server.go`, `server/handler.go`).
     *   ✅ Implement in-memory `TaskManager` (`server/task_manager.go`).
     *   ✅ Implement Agent Card serving (`server/agent_card.go`).
-    *   ⬜ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth.
+    *   ✅ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth (`client/client.go`, `client/options.go`).
     *   ⬜ Basic unit tests.
 2.  **Phase 2: SSE Implementation:**
     *   Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
