@@ -4,8 +4,8 @@ This readme sourced from: https://github.com/google/A2A
 
 **_An open protocol enabling communication and interoperability between opaque agentic applications._**
 
-One of the biggest challenges in enterprise AI adoption is getting agents built on different frameworks and vendors to work together. That’s why we created an open _Agent2Agent (A2A) protocol_, a collaborative way to help agents across different ecosystems communicate with each other. Google is driving this open protocol initiative for the industry because we believe this protocol will be **critical to support multi-agent communication by giving your agents a common language – irrespective of the framework or vendor they are built on**.
-With _A2A_, agents can show each other their capabilities and negotiate how they will interact with users (via text, forms, or bidirectional audio/video) – all while working securely together.
+One of the biggest challenges in enterprise AI adoption is getting agents built on different frameworks and vendors to work together. That’s why we created an open _Agent2Agent (A2A) protocol_, a collaborative way to help agents across different ecosystems communicate with each other. Google is driving this open protocol initiative for the industry because we believe this protocol will be **critical to support multi-agent communication by giving your agents a common language - irrespective of the framework or vendor they are built on**.
+With _A2A_, agents can show each other their capabilities and negotiate how they will interact with users (via text, forms, or bidirectional audio/video) - all while working securely together.
 
 ### Conceptual Overview
 
