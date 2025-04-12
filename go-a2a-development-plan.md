@@ -292,7 +292,7 @@ This architecture provides an all-in-one solution while maintaining flexibility 
     *   ✅ Implement BasicLLMAgent.
     *   ✅ Implement ToolAugmentedAgent.
     *   ✅ Add server configuration options for LLM-powered agents.
-    *   🔄 Create examples demonstrating LLM integration (started with `examples/llm_integration_example.go`, needs fixes).
+    *   🔄 Create LLM integration (started with `examples/llm_integration_example.go`, but needs to be real, not an example)
     *   ⬜ Add tests for LLM components.
     *   ⬜ Implement integration with task manager.
     *   ⬜ Add support for more LLM providers.
@@ -316,7 +316,7 @@ This architecture provides an all-in-one solution while maintaining flexibility 
             *   ⬜ Optional Request/response logging
             *   ⬜ Optional Task execution logging
         *   ⬜ Add graceful shutdown handling
-        *   ⬜ Create Dockerfile and docker-compose examples
+        *   ⬜ Create Dockerfile and docker-compose
         *   ⬜ Implement monitoring endpoints:
             *   ⬜ Health check endpoint
             *   ⬜ Basic Metrics endpoint (Prometheus compatible)
