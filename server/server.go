@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"errors"
-	"github.com/sammcj/go-a2a/llm/gollm"
 	"fmt"
 	"net/http"
 )
@@ -99,7 +98,11 @@ func (s *Server) Start() error {
 	return nil
 }
 func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request) {
-	s.config.AgentEngine.HandleRequest(w,r)
+	if handler, ok := s.config.AgentEngine.(interface{ HandleRequest(http.ResponseWriter, *http.Request) }); ok {
+		handler.HandleRequest(w, r)
+	} else {
+		http.Error(w, "AgentEngine does not support HandleRequest", http.StatusNotImplemented)
+	}
 }
 
 // Stop gracefully shuts down the server.

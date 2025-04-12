@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/cmd/common"
-	"github.com/sammcj/go-a2a/llm/gollm"
 	"github.com/sammcj/go-a2a/server"
 )
 
@@ -63,17 +62,11 @@ func main() {
 	}
 
 	// Load llm config
-	var llmConfig common.LLMConfig
-	if config.LLMConfig != nil {
-		llmConfig = *config.LLMConfig
-	} else {
-		llmConfig = common.DefaultLLMConfig()
-	}
+	llmConfig := common.DefaultLLMConfig()
 
 	gollmOpts, err := server.NewGollmOptionsFromConfig(llmConfig)
 	if err != nil {
 		logger.Fatal("Failed to create gollm options: %v", err)
-		}
 	}
 
 	// Load agent card

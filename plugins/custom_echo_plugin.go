@@ -14,7 +14,7 @@ import (
 type CustomEchoPlugin struct{}
 
 // GetTaskHandler returns the task handler function for the echo plugin.
-func (p *CustomEchoPlugin) GetTaskHandler() server.TaskHandler {
+func (p *CustomEchoPlugin) GetTaskHandler() func(context.Context, server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
 	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
 		// Create a channel for updates
 		updateChan := make(chan server.TaskYieldUpdate)
