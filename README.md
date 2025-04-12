@@ -508,6 +508,62 @@ llmAdapter, err := gollm.NewAdapter(
 
 5. **Custom Prompting**: Configure system prompts and directives for consistent agent behavior
 
+## Standalone Applications
+
+The library includes standalone server and client applications that can be used without writing any Go code:
+
+### A2A Server
+
+The A2A server is a standalone application that implements the A2A protocol. It can be used to host an A2A agent that can receive and process tasks from A2A clients.
+
+```bash
+# Build the server
+go build -o a2a-server ./cmd/a2a-server
+
+# Run the server
+./a2a-server --config config/server.json
+```
+
+The server supports plugins for task handling. Plugins are Go plugins that implement the `TaskHandlerPlugin` interface.
+
+### A2A Client
+
+The A2A client is a standalone application that can be used to interact with A2A servers.
+
+```bash
+# Build the client
+go build -o a2a-client ./cmd/a2a-client
+
+# Get agent card
+./a2a-client --url http://localhost:8080 card
+
+# Send a task
+./a2a-client --url http://localhost:8080 send --message "Hello, world!"
+```
+
+### Docker Support
+
+Both applications can be run using Docker:
+
+```bash
+# Build the Docker image
+docker build -t go-a2a .
+
+# Run the server
+docker run -p 8080:8080 -v ./config:/app/config -v ./plugins:/app/plugins go-a2a
+
+# Run the client
+docker run --entrypoint /app/bin/a2a-client go-a2a --url http://localhost:8080 card
+```
+
+A docker-compose.yml file is also provided for running the server and client together:
+
+```bash
+docker-compose up
+```
+
+For more information, see the [cmd/README.md](cmd/README.md) file.
+
 ## Development Status
 
 The library is currently in active development. The following features have been implemented:
@@ -520,6 +576,9 @@ The library is currently in active development. The following features have been
 - ✅ SSE support for streaming task updates
 - ✅ Authentication middleware
 - ✅ Push notification support
+- ✅ LLM integration with gollm
+- ✅ Standalone server and client applications
+- ✅ Docker support
 
 Future enhancements may include:
 
