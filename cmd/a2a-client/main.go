@@ -1,21 +1,20 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"time"
+	"context"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
-
+	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/client"
-	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/cmd/common"
 )
 
@@ -35,7 +34,6 @@ func main() {
 	sendFile := sendCmd.String("file", "", "File containing message to send")
 	sendSkill := sendCmd.String("skill", "", "Skill ID to use")
 	sendTaskID := sendCmd.String("task", "", "Task ID to resume")
-	sendSessionID := sendCmd.String("session", "", "Session ID to use")
 	sendStream := sendCmd.Bool("stream", false, "Stream task updates")
 
 	getCmd := flag.NewFlagSet("get", flag.ExitOnError)
@@ -70,7 +68,7 @@ func main() {
 		logger.Info("Loading configuration from %s", *configFile)
 		loadedConfig, err := common.LoadConfig[config.ClientConfig](*configFile)
 		if err != nil {
-			logger.Fatal("Failed to load configuration: %v", err)	
+			logger.Fatal("Failed to load configuration: %v", err)
 		}
 		config = *loadedConfig
 	} else {
@@ -134,7 +132,7 @@ func main() {
 	switch subcommand {
 	case "send":
 		sendCmd.Parse(flag.Args()[1:])
-		handleSendCommand(a2aClient, *sendMessage, *sendFile, *sendSkill, *sendTaskID, *sendSessionID, *sendStream, config, logger)
+		handleSendCommand(a2aClient, *sendMessage, *sendFile, *sendSkill, *sendTaskID, *sendStream, config, logger)
 	case "get":
 		getCmd.Parse(flag.Args()[1:])
 		handleGetCommand(a2aClient, *getTaskID, config, logger)
@@ -156,7 +154,7 @@ func main() {
 }
 
 // handleSendCommand handles the 'send' subcommand.
-func handleSendCommand(a2aClient *client.Client, message, file, skillID, taskID, sessionID string, stream bool, config config.ClientConfig, logger *common.Logger) {
+func handleSendCommand(a2aClient *client.Client, message, file, skillID, taskID string, stream bool, config config.ClientConfig, logger *common.Logger) {
 	// Get message content
 	var messageContent string
 	if message != "" {

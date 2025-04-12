@@ -2,21 +2,19 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"plugin"
 
 	"github.com/sammcj/go-a2a/a2a"
-	"github.com/sammcj/go-a2a/server"
 )
 
 // TaskHandlerPlugin represents a plugin that provides a task handler.
 type TaskHandlerPlugin interface {
-	// GetTaskHandler returns the task handler function.
-	GetTaskHandler() server.TaskHandler
+	GetTaskHandler() func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error)
 
-	// GetSkills returns the skills provided by this plugin.
-	GetSkills() []a2a.AgentSkill
+	GetSkills() []a2a.AgentSkill 
 }
 
 // LoadPlugin loads a plugin from the specified path.
@@ -65,10 +63,10 @@ func LoadPlugins(dir string) ([]TaskHandlerPlugin, error) {
 
 // MergeTaskHandlers merges multiple task handlers into a single task handler.
 // The resulting task handler will delegate to the appropriate plugin based on the skill ID.
-func MergeTaskHandlers(plugins []TaskHandlerPlugin) server.TaskHandler {
+func MergeTaskHandlers(plugins []TaskHandlerPlugin) func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
 	// Create a map of skill ID to task handler
-	handlers := make(map[string]server.TaskHandler)
-	for _, p := range plugins {
+	handlers := make(map[string]func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error))
+	for _, p := range plugins{
 		handler := p.GetTaskHandler()
 		for _, skill := range p.GetSkills() {
 			handlers[skill.ID] = handler
@@ -76,7 +74,7 @@ func MergeTaskHandlers(plugins []TaskHandlerPlugin) server.TaskHandler {
 	}
 
 	// Return a task handler that delegates to the appropriate plugin
-	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
+	return func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
 		// Get the skill ID from the message or use a default
 		skillID := ""
 		// Try to extract skill ID from the message metadata if available
@@ -102,7 +100,7 @@ func MergeTaskHandlers(plugins []TaskHandlerPlugin) server.TaskHandler {
 
 		// If no handler is found, return an error
 		if handler == nil {
-			return nil, fmt.Errorf("no handler found for skill %s", skillID)
+			return nil, errors.New("no handler found")
 		}
 
 		// Delegate to the handler
