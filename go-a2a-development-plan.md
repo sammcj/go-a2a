@@ -184,10 +184,10 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
     *   ✅ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth (`client/client.go`, `client/options.go`).
     *   ⬜ Basic unit tests.
 2.  **Phase 2: SSE Implementation:**
-    *   Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
-    *   Add client-side SSE handling.
-    *   Integrate SSE with `TaskManager` updates.
-    *   SSE-specific tests.
+    *   ✅ Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
+    *   ✅ Add client-side SSE handling.
+    *   ✅ Integrate SSE with `TaskManager` updates.
+    *   ⬜ SSE-specific tests.
 3.  **Phase 3: Authentication & Push Notifications:**
     *   Implement server-side auth middleware hooks/interfaces.
     *   Implement client-side auth configuration.
