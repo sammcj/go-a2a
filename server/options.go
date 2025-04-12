@@ -1,8 +1,13 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/sammcj/go-a2a/a2a"
 )
+
+// AuthValidator is a function that validates authentication for requests.
+type AuthValidator func(w http.ResponseWriter, r *http.Request, next http.Handler, card *a2a.AgentCard)
 
 // Config holds the configuration for the A2A server.
 type Config struct {
@@ -12,6 +17,7 @@ type Config struct {
 	AgentCardPath string         // Path to serve the agent card (e.g., "/.well-known/agent.json")
 	TaskManager   TaskManager    // The task manager implementation
 	TaskHandler   TaskHandler    // The application-specific task handler logic
+	AuthValidator AuthValidator  // Optional authentication validator function
 	// TODO: Add fields for TLS config, middleware, SSE config, etc.
 }
 
@@ -67,6 +73,11 @@ func WithTaskHandler(handler TaskHandler) Option {
 	}
 }
 
-// TODO: Add options for middleware, TLS, SSE configuration, etc.
-// Example:
-// func WithMiddleware(mw ...func(http.Handler) http.Handler) Option { ... }
+// WithAuthValidator sets the authentication validator function.
+func WithAuthValidator(validator AuthValidator) Option {
+	return func(c *Config) {
+		c.AuthValidator = validator
+	}
+}
+
+// TODO: Add options for TLS, SSE configuration, etc.

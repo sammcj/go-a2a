@@ -38,7 +38,7 @@ func NewServer(opts ...Option) (*Server, error) {
 		sseManager:  NewSSEManager(),
 	}
 
-	// Setup HTTP routing (basic for now)
+	// Setup HTTP routing
 	mux := http.NewServeMux()
 
 	// Register Agent Card handler
@@ -50,9 +50,30 @@ func NewServer(opts ...Option) (*Server, error) {
 	// Register SSE endpoint
 	mux.HandleFunc(cfg.A2APathPrefix+"/sse", s.handleSSERequest)
 
+	// Create the final handler with middleware
+	var handler http.Handler = mux
+
+	// Apply authentication middleware if configured
+	if cfg.AuthValidator != nil {
+		// Import the middleware package locally to avoid import issues
+		authMiddleware := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Skip authentication for agent card requests
+				if r.URL.Path == cfg.AgentCardPath {
+					next.ServeHTTP(w, r)
+					return
+				}
+
+				// Apply authentication logic
+				cfg.AuthValidator(w, r, next, cfg.AgentCard)
+			})
+		}
+		handler = authMiddleware(handler)
+	}
+
 	s.httpServer = &http.Server{
 		Addr:    cfg.ListenAddress,
-		Handler: mux, // TODO: Add middleware (logging, auth)
+		Handler: handler,
 		// TODO: Configure timeouts (ReadTimeout, WriteTimeout, IdleTimeout)
 	}
 
