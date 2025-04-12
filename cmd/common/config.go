@@ -1,14 +1,15 @@
 package common
 
 import (
-	"github.com/sammcj/go-a2a/pkg/config"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/pkg/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,7 +50,7 @@ func LoadConfig[T any](filePath string) (*T, error) {
 	}
 
 	// Read file
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
