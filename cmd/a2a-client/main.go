@@ -15,6 +15,7 @@ import (
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/client"
+	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/cmd/common"
 )
 
@@ -64,12 +65,12 @@ func main() {
 	logger := common.NewLogger(os.Stdout, "info")
 
 	// Load configuration
-	var config common.ClientConfig
+	var config config.ClientConfig
 	if *configFile != "" {
 		logger.Info("Loading configuration from %s", *configFile)
-		loadedConfig, err := common.LoadConfig[common.ClientConfig](*configFile)
+		loadedConfig, err := common.LoadConfig[config.ClientConfig](*configFile)
 		if err != nil {
-			logger.Fatal("Failed to load configuration: %v", err)
+			logger.Fatal("Failed to load configuration: %v", err)	
 		}
 		config = *loadedConfig
 	} else {
@@ -155,7 +156,7 @@ func main() {
 }
 
 // handleSendCommand handles the 'send' subcommand.
-func handleSendCommand(a2aClient *client.Client, message, file, skillID, taskID, sessionID string, stream bool, config common.ClientConfig, logger *common.Logger) {
+func handleSendCommand(a2aClient *client.Client, message, file, skillID, taskID, sessionID string, stream bool, config config.ClientConfig, logger *common.Logger) {
 	// Get message content
 	var messageContent string
 	if message != "" {
@@ -250,7 +251,7 @@ func handleSendCommand(a2aClient *client.Client, message, file, skillID, taskID,
 }
 
 // handleGetCommand handles the 'get' subcommand.
-func handleGetCommand(a2aClient *client.Client, taskID string, config common.ClientConfig, logger *common.Logger) {
+func handleGetCommand(a2aClient *client.Client, taskID string, config config.ClientConfig, logger *common.Logger) {
 	if taskID == "" {
 		logger.Fatal("Task ID must be specified")
 	}
@@ -266,7 +267,7 @@ func handleGetCommand(a2aClient *client.Client, taskID string, config common.Cli
 }
 
 // handleCancelCommand handles the 'cancel' subcommand.
-func handleCancelCommand(a2aClient *client.Client, taskID string, config common.ClientConfig, logger *common.Logger) {
+func handleCancelCommand(a2aClient *client.Client, taskID string, config config.ClientConfig, logger *common.Logger) {
 	if taskID == "" {
 		logger.Fatal("Task ID must be specified")
 	}
@@ -282,7 +283,7 @@ func handleCancelCommand(a2aClient *client.Client, taskID string, config common.
 }
 
 // handleSubscribeCommand handles the 'subscribe' subcommand.
-func handleSubscribeCommand(a2aClient *client.Client, taskID, lastEventID string, config common.ClientConfig, logger *common.Logger) {
+func handleSubscribeCommand(a2aClient *client.Client, taskID, lastEventID string, config config.ClientConfig, logger *common.Logger) {
 	if taskID == "" {
 		logger.Fatal("Task ID must be specified")
 	}
@@ -327,7 +328,7 @@ func handleSubscribeCommand(a2aClient *client.Client, taskID, lastEventID string
 }
 
 // handlePushCommand handles the 'push' subcommand.
-func handlePushCommand(a2aClient *client.Client, taskID, url, auth string, includeTask, includeArtifacts, get bool, config common.ClientConfig, logger *common.Logger) {
+func handlePushCommand(a2aClient *client.Client, taskID, url, auth string, includeTask, includeArtifacts, get bool, config config.ClientConfig, logger *common.Logger) {
 	if taskID == "" {
 		logger.Fatal("Task ID must be specified")
 	}
@@ -406,7 +407,7 @@ func handlePushCommand(a2aClient *client.Client, taskID, url, auth string, inclu
 }
 
 // handleCardCommand handles the 'card' subcommand.
-func handleCardCommand(a2aClient *client.Client, config common.ClientConfig, logger *common.Logger) {
+func handleCardCommand(a2aClient *client.Client, config config.ClientConfig, logger *common.Logger) {
 	// Fetch agent card
 	card, err := a2aClient.FetchAgentCard(context.Background())
 	if err != nil {
@@ -418,7 +419,7 @@ func handleCardCommand(a2aClient *client.Client, config common.ClientConfig, log
 }
 
 // runInteractiveMode runs the client in interactive mode.
-func runInteractiveMode(config common.ClientConfig, logger *common.Logger) {
+func runInteractiveMode(config config.ClientConfig, logger *common.Logger) {
 	logger.Info("Interactive mode not implemented yet")
 	// TODO: Implement interactive mode
 }
