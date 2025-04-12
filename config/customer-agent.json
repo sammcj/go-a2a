@@ -1,0 +1,39 @@
+{
+  "listenAddress": ":8082",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "llmConfig": {
+    "provider": "ollama",
+    "model": "mistral",
+    "baseUrl": "http://localhost:11434",
+    "systemPrompt": "You are a customer agent that handles user requests and coordinates with other agents. You route requests to the appropriate agent based on the nature of the request."
+  },
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "customer-agent",
+    "name": "Customer Agent",
+    "description": "An agent that handles user requests and coordinates with other agents",
+    "provider": {
+      "name": "go-a2a Example",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "request-handling",
+        "name": "Request Handling",
+        "description": "Handle user requests and route them to the appropriate agent"
+      },
+      {
+        "id": "agent-coordination",
+        "name": "Agent Coordination",
+        "description": "Coordinate with other agents to fulfill user requests"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    }
+  }
+}

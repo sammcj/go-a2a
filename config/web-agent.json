@@ -1,0 +1,69 @@
+{
+  "listenAddress": ":8081",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "llmConfig": {
+    "provider": "ollama",
+    "model": "llama3",
+    "baseUrl": "http://localhost:11434",
+    "systemPrompt": "You are a web agent that can search the internet and fetch web pages. You provide factual information based on web content."
+  },
+  "mcpConfig": {
+    "tools": [
+      {
+        "name": "fetch",
+        "enabled": true,
+        "config": {
+          "autoApprove": ["fetch"],
+          "disabled": false,
+          "timeout": 60,
+          "command": "uvx",
+          "args": ["mcp-server-fetch"],
+          "transportType": "stdio"
+        }
+      },
+      {
+        "name": "brave-search",
+        "enabled": true,
+        "config": {
+          "autoApprove": ["brave_web_search", "brave_local_search"],
+          "timeout": 60,
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+          "env": {
+            "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+          },
+          "transportType": "stdio"
+        }
+      }
+    ]
+  },
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "web-agent",
+    "name": "Web Agent",
+    "description": "An agent that can search the internet and fetch web pages",
+    "provider": {
+      "name": "go-a2a Example",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "web-search",
+        "name": "Web Search",
+        "description": "Search the internet for information"
+      },
+      {
+        "id": "web-fetch",
+        "name": "Web Fetch",
+        "description": "Fetch and extract content from web pages"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    }
+  }
+}

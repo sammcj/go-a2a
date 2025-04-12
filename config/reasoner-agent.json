@@ -1,0 +1,45 @@
+{
+  "listenAddress": ":8083",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "llmConfig": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "apiKey": "${OPENAI_API_KEY}",
+    "baseUrl": "${OPENAI_BASE_URL}",
+    "systemPrompt": "You are a reasoner agent that performs complex reasoning and thinking on provided information. You analyse information critically, identify patterns, draw conclusions, and provide well-reasoned insights."
+  },
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "reasoner-agent",
+    "name": "Reasoner Agent",
+    "description": "An agent that performs complex reasoning and thinking on provided information",
+    "provider": {
+      "name": "go-a2a Example",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "critical-analysis",
+        "name": "Critical Analysis",
+        "description": "Analyse information critically and identify patterns"
+      },
+      {
+        "id": "logical-reasoning",
+        "name": "Logical Reasoning",
+        "description": "Draw logical conclusions from provided information"
+      },
+      {
+        "id": "insight-generation",
+        "name": "Insight Generation",
+        "description": "Generate insights and recommendations based on analysis"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    }
+  }
+}
