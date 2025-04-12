@@ -194,6 +194,238 @@ func TestSendTask(t *testing.T) {
 	}
 }
 
+func TestGetTask(t *testing.T) {
+    // Define sample task ID
+    sampleTaskID := "test-task"
+
+    // Define sample JSON-RPC response for GetTask
+    sampleResponse := a2a.JSONRPCResponse{
+        JSONRPC: "2.0",
+        ID:      "client-request-1",
+        Result: map[string]interface{}{
+            "id":      sampleTaskID,
+            "status":  "pending",
+            "skillId": "test-skill",
+        },
+    }
+    sampleResponseJSON, err := json.Marshal(sampleResponse)
+    if err != nil {
+        t.Fatalf("Failed to marshal sample response: %v", err)
+    }
+
+    // Create a mock HTTP server
+    server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Check for correct method
+        if r.Method != http.MethodPost {
+            t.Errorf("Expected POST request, got %s", r.Method)
+            w.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+
+        // Send the sample response
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        w.Write(sampleResponseJSON)
+    }))
+    defer server.Close()
+
+    // Create a client using the mock server's URL
+    client, err := NewClient(WithBaseURL(server.URL))
+    if err != nil {
+        t.Fatalf("Failed to create client: %v", err)
+    }
+
+    // Get the task
+    task, err := client.GetTask(context.Background(), sampleTaskID)
+    if err != nil {
+        t.Fatalf("Failed to get task: %v", err)
+    }
+
+    // Check the response
+    if task.ID != sampleTaskID {
+        t.Errorf("Expected task ID '%s', got %s", sampleTaskID, task.ID)
+    }
+}
+
+func TestCancelTask(t *testing.T) {
+	// Define sample task ID
+	sampleTaskID := "test-task"
+
+	// Define sample JSON-RPC response for CancelTask
+	sampleResponse := a2a.JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      "client-request-1",
+		Result: map[string]interface{}{
+			"id":     sampleTaskID,
+			"status": "canceled",
+		},
+	}
+	sampleResponseJSON, err := json.Marshal(sampleResponse)
+	if err != nil {
+		t.Fatalf("Failed to marshal sample response: %v", err)
+	}
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check for correct method
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Send the sample response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(sampleResponseJSON)
+	}))
+	defer server.Close()
+
+	// Create a client using the mock server's URL
+	client, err := NewClient(WithBaseURL(server.URL))
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	// Cancel the task
+	task, err := client.CancelTask(context.Background(), sampleTaskID)
+	if err != nil {
+		t.Fatalf("Failed to cancel task: %v", err)
+	}
+
+	// Check the response
+	if task.ID != sampleTaskID {
+		t.Errorf("Expected task ID '%s', got %s", sampleTaskID, task.ID)
+	}
+    if task.Status != "canceled" {
+        t.Errorf("Expected task status to be canceled, got %s", task.Status)
+    }
+}
+
+func TestSetTaskPushNotification(t *testing.T) {
+	// Define sample task push notification config params
+	sampleTaskID := "test-task"
+	samplePushNotificationConfig := &a2a.TaskPushNotificationConfigParams{
+		TaskID:        sampleTaskID,
+		CallbackURL:   "http://test.com/callback",
+	}
+
+	// Define sample JSON-RPC response for SetTaskPushNotification
+	sampleResponse := a2a.JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      "client-request-1",
+		Result: map[string]interface{}{
+			"taskId": sampleTaskID,
+			"callbackUrl": "http://test.com/callback",
+		},
+	}
+	sampleResponseJSON, err := json.Marshal(sampleResponse)
+	if err != nil {
+		t.Fatalf("Failed to marshal sample response: %v", err)
+	}
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check for correct method
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Send the sample response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(sampleResponseJSON)
+	}))
+	defer server.Close()
+
+	// Create a client using the mock server's URL
+	client, err := NewClient(WithBaseURL(server.URL))
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	// Set the task push notification config
+	config, err := client.SetTaskPushNotification(context.Background(), samplePushNotificationConfig)
+	if err != nil {
+		t.Fatalf("Failed to set task push notification config: %v", err)
+	}
+
+	// Check the response
+	if config.TaskID != sampleTaskID {
+		t.Errorf("Expected task ID '%s', got %s", sampleTaskID, config.TaskID)
+	}
+    if config.CallbackURL != "http://test.com/callback" {
+        t.Errorf("Expected callback url 'http://test.com/callback', got %s", config.CallbackURL)
+    }
+}
+
+func TestGetTaskPushNotification(t *testing.T){
+	// Define sample task ID
+	sampleTaskID := "test-task"
+
+	// Define sample JSON-RPC response for GetTaskPushNotification
+	sampleResponse := a2a.JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      "client-request-1",
+		Result: map[string]interface{}{
+			"taskId":      sampleTaskID,
+			"callbackUrl": "http://test.com/callback",
+		},
+	}
+	sampleResponseJSON, err := json.Marshal(sampleResponse)
+	if err != nil {
+		t.Fatalf("Failed to marshal sample response: %v", err)
+	}
+
+	// Create a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check for correct method
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", r.Method)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Read request body
+        body, err := io.ReadAll(r.Body)
+        if err != nil {
+            t.Fatalf("Failed to read request body: %v", err)
+        }
+        // Check for correct request
+        if !bytes.Contains(body, []byte(`"method":"tasks/pushNotification/get"`)) {
+            t.Errorf("Expected request to contain 'method:tasks/pushNotification/get', got %s", body)
+        }
+
+		// Send the sample response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(sampleResponseJSON)
+	}))
+	defer server.Close()
+
+	// Create a client using the mock server's URL
+	client, err := NewClient(WithBaseURL(server.URL))
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	// Get the task push notification config
+	config, err := client.GetTaskPushNotification(context.Background(), sampleTaskID)
+	if err != nil {
+		t.Fatalf("Failed to get task push notification config: %v", err)
+	}
+
+	// Check the response
+	if config.TaskID != sampleTaskID {
+		t.Errorf("Expected task ID '%s', got %s", sampleTaskID, config.TaskID)
+	}
+    if config.CallbackURL != "http://test.com/callback" {
+        t.Errorf("Expected callback url 'http://test.com/callback', got %s", config.CallbackURL)
+    }
+}
+
 func TestSendJSONRPCRequest(t *testing.T) {
     // Define sample JSON-RPC request and response
     sampleRequest := a2a.JSONRPCRequest{
