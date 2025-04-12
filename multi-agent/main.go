@@ -177,11 +177,6 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 		TaskRouter: taskRouter,
 	}
 
-	// Create MCP client if MCP config is provided
-	if len(config.MCPConfig.Tools) > 0 {
-		agent.MCPClient = NewCustomMCPClient(config.MCPConfig)
-	}
-
 	// Create gollm options
 	gollmOptions := []gollm.Option{
 		gollm.WithProvider(config.LLMConfig.Provider),
@@ -199,30 +194,35 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 		server.WithA2APathPrefix(config.A2APathPrefix),
 	}
 
-	// Add MCP client if available
-	if agent.MCPClient != nil {
-		// Create gollm adapter
+	// Create task handler based on agent type
+	var taskHandler func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error)
+	switch config.AgentCard.ID {
+	case "web-agent":
+		taskHandler = createWebAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
+	case "customer-agent":
+		taskHandler = createCustomerAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions, taskRouter)
+	case "reasoner-agent":
+		taskHandler = createReasonerAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
+	default:
+		// For unknown agent types, create a simple echo handler
+		taskHandler = createDefaultAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
+	}
+
+	// Create MCP client and add MCP tool augmented agent if MCP config is provided
+	if len(config.MCPConfig.Tools) > 0 {
+		agent.MCPClient = NewCustomMCPClient(config.MCPConfig)
+
+		// Create gollm adapter for MCP tool augmented agent
 		adapter, err := gollm.NewAdapter(gollmOptions...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create gollm adapter: %w", err)
 		}
 
-		// Add MCP tool augmented agent
-		serverOptions = append(serverOptions, server.WithMCPToolAugmentedAgent(adapter, agent.MCPClient))
+		// Add MCP tool augmented agent with task handler as fallback
+		serverOptions = append(serverOptions,
+			server.WithMCPToolAugmentedAgent(adapter, agent.MCPClient),
+			server.WithTaskHandler(taskHandler))
 	} else {
-		// Create task handler based on agent type
-		var taskHandler func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error)
-		switch config.AgentCard.ID {
-		case "web-agent":
-			taskHandler = createWebAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
-		case "customer-agent":
-			taskHandler = createCustomerAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions, taskRouter)
-		case "reasoner-agent":
-			taskHandler = createReasonerAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
-		default:
-			return nil, fmt.Errorf("unknown agent type: %s", config.AgentCard.ID)
-		}
-
 		// Add task handler
 		serverOptions = append(serverOptions, server.WithTaskHandler(taskHandler))
 	}
@@ -244,6 +244,92 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 	agent.Client = a2aClient
 
 	return agent, nil
+}
+
+// createDefaultAgentHandler creates a simple task handler for unknown agent types.
+func createDefaultAgentHandler(systemPrompt string, gollmOptions []gollm.Option) func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
+	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
+		updateChan := make(chan server.TaskYieldUpdate)
+
+		go func() {
+			defer close(updateChan)
+
+			// Extract the user's message
+			userMessage := taskCtx.UserMessage
+			var userText string
+			for _, part := range userMessage.Parts {
+				if textPart, ok := part.(a2a.TextPart); ok {
+					userText = textPart.Text
+					break
+				}
+			}
+
+			// Send a working status update
+			updateChan <- server.StatusUpdate{
+				State: a2a.TaskStateWorking,
+			}
+
+			// Create gollm adapter
+			adapter, err := gollm.NewAdapter(gollmOptions...)
+			if err != nil {
+				updateChan <- server.StatusUpdate{
+					State: a2a.TaskStateFailed,
+					Message: &a2a.Message{
+						Role: a2a.RoleSystem,
+						Parts: []a2a.Part{
+							a2a.TextPart{
+								Type: "text",
+								Text: fmt.Sprintf("Failed to create gollm adapter: %v", err),
+							},
+						},
+					},
+				}
+				return
+			}
+
+			// Process the message with the LLM
+			response, err := adapter.Generate(ctx, userText, llm.WithSystemPrompt(systemPrompt))
+			if err != nil {
+				updateChan <- server.StatusUpdate{
+					State: a2a.TaskStateFailed,
+					Message: &a2a.Message{
+						Role: a2a.RoleSystem,
+						Parts: []a2a.Part{
+							a2a.TextPart{
+								Type: "text",
+								Text: fmt.Sprintf("Failed to generate response: %v", err),
+							},
+						},
+					},
+				}
+				return
+			}
+
+			// Create a response message
+			responseMessage := a2a.Message{
+				Role: a2a.RoleAgent,
+				Parts: []a2a.Part{
+					a2a.TextPart{
+						Type: "text",
+						Text: response,
+					},
+				},
+			}
+
+			// Send a working status update with the response
+			updateChan <- server.StatusUpdate{
+				State:   a2a.TaskStateWorking,
+				Message: &responseMessage,
+			}
+
+			// Send a completed status update
+			updateChan <- server.StatusUpdate{
+				State: a2a.TaskStateCompleted,
+			}
+		}()
+
+		return updateChan, nil
+	}
 }
 
 // createWebAgentHandler creates a task handler for the web agent.
@@ -621,17 +707,17 @@ func main() {
 	taskRouter := NewTaskRouter()
 
 	// Load agent configurations
-	webAgentConfig, err := LoadAgentConfig("config/web-agent.json")
+	webAgentConfig, err := LoadAgentConfig("../config/web-agent.json")
 	if err != nil {
 		log.Fatalf("Failed to load web agent config: %v", err)
 	}
 
-	customerAgentConfig, err := LoadAgentConfig("config/customer-agent.json")
+	customerAgentConfig, err := LoadAgentConfig("../config/customer-agent.json")
 	if err != nil {
 		log.Fatalf("Failed to load customer agent config: %v", err)
 	}
 
-	reasonerAgentConfig, err := LoadAgentConfig("config/reasoner-agent.json")
+	reasonerAgentConfig, err := LoadAgentConfig("../config/reasoner-agent.json")
 	if err != nil {
 		log.Fatalf("Failed to load reasoner agent config: %v", err)
 	}
