@@ -4,9 +4,10 @@ import (
 	"net/http"
 
 	"github.com/sammcj/go-a2a/a2a"
-	"github.com/sammcj/go-a2a/cmd/common"
-	"github.com/sammcj/go-a2a/pkg/config"
+	"github.com/sammcj/go-a2a/llm"
 	"github.com/sammcj/go-a2a/llm/gollm"
+	"github.com/sammcj/go-a2a/pkg/config"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // AuthValidator is a function that validates authentication for requests.
@@ -19,11 +20,11 @@ type Config struct {
 	AgentCard     *a2a.AgentCard // The agent card describing this agent
 	AgentCardPath string         // Path to serve the agent card (e.g., "/.well-known/agent.json")
 	TaskManager   TaskManager    // The task manager implementation
-	TaskHandler   TaskHandler    // The application-specific task handler logic
+	TaskHandler   task.Handler   // The application-specific task handler logic
 	AgentEngine   AgentEngine    // The agent engine implementation
 	AuthValidator AuthValidator  // Optional authentication validator function
 	// TODO: Add fields for optional TLS config, middleware, SSE config, etc.
-	gollmOptions  *gollm.Options
+	gollmOptions  []gollm.Option
 }
 
 // Option is a function that modifies the server configuration.
@@ -72,7 +73,7 @@ func WithTaskManager(tm TaskManager) Option {
 
 // WithTaskHandler sets the application-specific task handler function.
 // This is required unless a custom TaskManager is provided.
-func WithTaskHandler(handler TaskHandler) Option {
+func WithTaskHandler(handler task.Handler) Option {
 	return func(c *Config) {
 		c.TaskHandler = handler
 	}
@@ -92,86 +93,41 @@ func WithAgentEngine(engine AgentEngine) Option {
 	}
 }
 
-// WithBasicLLMAgent creates a BasicLLMAgent with the provided LLM interface and system prompt.
-// func WithBasicLLMAgent(llmInterface llm.LLMInterface, systemPrompt string) Option {
-// 	return func(c *Config) {
-// 		c.AgentEngine = NewBasicLLMAgent(llmInterface, systemPrompt)
-// 	}
-// }
-
-// // WithBasicGollmAgent creates a BasicLLMAgent with a gollm adapter.
-// func WithBasicGollmAgent(provider, model, apiKey, systemPrompt string) Option {
-// 	return func(c *Config) {
-// 		// Create gollm adapter
-// 		adapter, err := gollm.NewAdapter(
-// 			gollm.WithProvider(provider),
-// 			gollm.WithModel(model),
-// 			gollm.WithAPIKey(apiKey),
-// 		)
-// 		if err != nil {
-// 			// Log error and return without setting the agent engine
-// 			// TODO: Consider a better way to handle errors in options
-// 			return
-// 		}
-
-// 		// Create agent
-// 		c.AgentEngine = NewBasicLLMAgent(adapter, systemPrompt)
-// 	}
-// }
-
-// WithGollmOptions sets a custom gollm.Options struct
-func WithGollmOptions(options *gollm.Options) Option {
+// WithGollmOptions sets gollm options to be used when creating LLM interfaces
+func WithGollmOptions(options []gollm.Option) Option {
 	return func(c *Config) {
 		c.gollmOptions = options
 	}
 }
-//GollmConfig is a config for use with gollm
-type GollmConfig config.LLMConfig
 
-// NewGollmOptions creates new gollm options from an GollmConfig
-func NewGollmOptions(gollmConfig GollmConfig) (*gollm.Options, error) {
-	options := []func(*gollm.Options) error{}
-
-	if gollmConfig.Provider != "" {
-		options = append(options, gollm.WithProvider(gollmConfig.Provider))
-	}
-	if gollmConfig.Model != "" {
-		options = append(options, gollm.WithModel(gollmConfig.Model))
-	}
-	if gollmConfig.APIKey != "" {
-		options = append(options, gollm.WithAPIKey(gollmConfig.APIKey))
-	}
-	if gollmConfig.SystemPrompt != "" {
-		options = append(options, gollm.WithSystemPrompt(gollmConfig.SystemPrompt))
-	}
-	if gollmConfig.BaseUrl != "" {
-		options = append(options, gollm.WithBaseURL(gollmConfig.BaseUrl))
-	}
-	if len(gollmConfig.Options) > 0 {
-		options = append(options, gollm.WithOptions(gollmConfig.Options))
-	}
-
-	return gollm.NewOptions(options...)
+// GollmConfig is a config for use with gollm
+type GollmConfig struct {
+	Provider     string
+	Model        string
+	APIKey       string
+	SystemPrompt string
+	BaseUrl      string
+	Options      map[string]interface{}
 }
 
-// DefaultGollmConfig returns a default gollm config.
-func DefaultGollmConfig() GollmConfig {
-	defaultLLMConfig := config.DefaultLLMConfig()
-	return GollmConfig(defaultLLMConfig)
-}
+// NewGollmOptionsFromConfig creates gollm options from a config.LLMConfig
+func NewGollmOptionsFromConfig(llmConfig config.LLMConfig) ([]gollm.Option, error) {
+	var options []gollm.Option
 
-// NewGollmOptionsFromConfig creates new gollm options from a config.LLMConfig
-func NewGollmOptionsFromConfig(llmConfig config.LLMConfig) (*gollm.Options, error) {
-	return NewGollmOptions(GollmConfig{
-		Provider:     llmConfig.Provider,
-		Model:        llmConfig.Model,
-		APIKey:       llmConfig.ApiKey,
-		SystemPrompt: llmConfig.SystemPrompt,
-		BaseUrl:      llmConfig.BaseUrl,
-		Options:      llmConfig.Options,
-	})
-}
+	if llmConfig.Provider != "" {
+		options = append(options, gollm.WithProvider(llmConfig.Provider))
+	}
+	if llmConfig.Model != "" {
+		options = append(options, gollm.WithModel(llmConfig.Model))
+	}
+	if llmConfig.APIKey != "" {
+		options = append(options, gollm.WithAPIKey(llmConfig.APIKey))
+	}
 
+	// Other options can be added as needed based on what's supported by gollm.Option
+
+	return options, nil
+}
 
 // WithToolAugmentedAgent creates a ToolAugmentedAgent with the provided llm.LLMInterface and tools.
 func WithToolAugmentedAgent(llmInterface llm.LLMInterface, tools []Tool) Option {

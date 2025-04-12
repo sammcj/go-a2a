@@ -7,17 +7,17 @@ import (
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/cmd/common"
-	"github.com/sammcj/go-a2a/server"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // EchoPlugin is an example plugin that echoes back the user's message.
 type EchoPlugin struct{}
 
 // GetTaskHandler returns the task handler function for the echo plugin.
-func (p *EchoPlugin) GetTaskHandler() server.TaskHandler {
-	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
-		// Create a channel for updates
-		updateChan := make(chan server.TaskYieldUpdate)
+func (p *EchoPlugin) GetTaskHandler() task.Handler {
+return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
+// Create a channel for updates
+updateChan := make(chan task.YieldUpdate)
 
 		// Start a goroutine to handle the task
 		go func() {
@@ -46,7 +46,7 @@ func (p *EchoPlugin) GetTaskHandler() server.TaskHandler {
 			}
 
 			// Send a status update with the agent message
-			updateChan <- server.StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State:   a2a.TaskStateCompleted,
 				Message: agentMessage,
 			}

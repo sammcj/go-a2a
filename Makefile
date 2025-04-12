@@ -24,7 +24,7 @@ $(CONFIG_DIR):
 
 # Build targets
 .PHONY: build
-build: $(BINARY_DIR) build-server build-client
+build: $(BINARY_DIR) build-server build-client build-plugin
 
 .PHONY: build-server
 build-server: $(SERVER_BINARY)

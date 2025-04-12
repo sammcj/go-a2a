@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,10 +110,10 @@ func SaveConfig[T any](config T, filePath string) error {
 		return fmt.Errorf("unsupported configuration format: %s", format)
 	}
 
-	// Write file
-	if err := ioutil.WriteFile(filePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write configuration file: %w", err)
-	}
+// Write file
+if err := os.WriteFile(filePath, data, 0644); err != nil {
+return fmt.Errorf("failed to write configuration file: %w", err)
+}
 
 	return nil
 }
@@ -215,26 +214,28 @@ func ConvertToAgentCard(config config.AgentCardConfig) *a2a.AgentCard {
 // DefaultServerConfig returns a default server configuration.
 func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
-		ListenAddress: ":8080",
-		AgentCardPath: "/.well-known/agent.json",
-		A2APathPrefix: "/a2a",
-		LogLevel:      "info",
-		AgentCard: config.AgentCardConfig{
-			A2AVersion: "1.0",
-			ID:         "go-a2a-server",
-			Name:       "Go A2A Server",
-			Description: "A standalone A2A server implemented in Go",
-			Skills: []config.SkillConfig{
-				{
+		ServerConfig: config.ServerConfig{
+			ListenAddress: ":8080",
+			AgentCardPath: "/.well-known/agent.json",
+			A2APathPrefix: "/a2a",
+			LogLevel:      "info",
+			AgentCard: config.AgentCardConfig{
+				A2AVersion: "1.0",
+				ID:         "go-a2a-server",
+				Name:       "Go A2A Server",
+				Description: "A standalone A2A server implemented in Go",
+				Skills: []config.SkillConfig{
+					{
 						ID:          "echo",
-					Name:        "Echo",
-					Description: "Echoes back the input message",
+						Name:        "Echo",
+						Description: "Echoes back the input message",
+					},
 				},
-			},
-			Capabilities: &CapabilitiesConfig{
-				SupportsStreaming:       true,
-				SupportsSessions:        true,
-				SupportsPushNotification: true,
+				Capabilities: &config.CapabilitiesConfig{
+					SupportsStreaming:       true,
+					SupportsSessions:        true,
+					SupportsPushNotification: true,
+				},
 			},
 		},
 	}

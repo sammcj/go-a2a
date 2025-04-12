@@ -6,6 +6,7 @@ import (
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/llm"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // AgentEngine defines the interface for agent intelligence.
@@ -15,7 +16,7 @@ type AgentEngine interface {
 	// ProcessTask processes a task and returns a channel for updates.
 	// It takes a context for cancellation and a TaskContext containing the task details.
 	// It returns a channel for yielding updates (status changes, artifacts) and any error that occurred.
-	ProcessTask(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error)
+	ProcessTask(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error)
 
 	// GetCapabilities returns the agent's capabilities.
 	GetCapabilities() AgentCapabilities
@@ -58,8 +59,8 @@ func NewBasicLLMAgent(llmInterface llm.LLMInterface, systemPrompt string) *Basic
 }
 
 // ProcessTask implements AgentEngine.ProcessTask.
-func (a *BasicLLMAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
-	updateChan := make(chan TaskYieldUpdate)
+func (a *BasicLLMAgent) ProcessTask(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
+	updateChan := make(chan task.YieldUpdate)
 
 	go func() {
 		defer close(updateChan)
@@ -75,7 +76,7 @@ func (a *BasicLLMAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<
 		}
 
 		// Send a working status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateWorking,
 		}
 
@@ -83,7 +84,7 @@ func (a *BasicLLMAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<
 		response, err := a.llm.Generate(ctx, userText, llm.WithSystemPrompt(a.systemPrompt))
 		if err != nil {
 			// Send a failed status update
-			updateChan <- StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State: a2a.TaskStateFailed,
 				Message: &a2a.Message{
 					Role: a2a.RoleSystem,
@@ -110,13 +111,13 @@ func (a *BasicLLMAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<
 		}
 
 		// Send a working status update with the response
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State:   a2a.TaskStateWorking,
 			Message: &responseMessage,
 		}
 
 		// Send a completed status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateCompleted,
 		}
 	}()
@@ -174,8 +175,8 @@ func NewToolAugmentedAgent(llmInterface llm.LLMInterface, tools []Tool) *ToolAug
 }
 
 // ProcessTask implements AgentEngine.ProcessTask.
-func (a *ToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
-	updateChan := make(chan TaskYieldUpdate)
+func (a *ToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
+	updateChan := make(chan task.YieldUpdate)
 
 	go func() {
 		defer close(updateChan)
@@ -191,7 +192,7 @@ func (a *ToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskContex
 		}
 
 		// Send a working status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateWorking,
 		}
 
@@ -199,7 +200,7 @@ func (a *ToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskContex
 		response, err := a.llm.Generate(ctx, userText, llm.WithSystemPrompt(a.systemPrompt))
 		if err != nil {
 			// Send a failed status update
-			updateChan <- StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State: a2a.TaskStateFailed,
 				Message: &a2a.Message{
 					Role: a2a.RoleSystem,
@@ -229,13 +230,13 @@ func (a *ToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskContex
 		}
 
 		// Send a working status update with the response
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State:   a2a.TaskStateWorking,
 			Message: &responseMessage,
 		}
 
 		// Send a completed status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateCompleted,
 		}
 	}()

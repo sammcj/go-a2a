@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // SSEManager manages Server-Sent Events (SSE) connections for A2A tasks.
@@ -224,7 +225,7 @@ func (s *Server) handleTaskSendSubscribe(ctx context.Context, w http.ResponseWri
 		// For new tasks, we need to get the task ID from the first update
 		select {
 		case update := <-updateChan:
-			if statusUpdate, ok := update.(StatusUpdate); ok && statusUpdate.State == a2a.TaskStateSubmitted {
+			if statusUpdate, ok := update.(task.StatusUpdate); ok && statusUpdate.State == a2a.TaskStateSubmitted {
 				// Get the task from the task manager
 				task, err := s.taskManager.OnGetTask(ctx, &a2a.TaskQueryParams{TaskID: taskID})
 				if err != nil {
@@ -246,13 +247,13 @@ func (s *Server) handleTaskSendSubscribe(ctx context.Context, w http.ResponseWri
 	go func() {
 		for update := range updateChan {
 			switch u := update.(type) {
-			case StatusUpdate:
+			case task.StatusUpdate:
 				s.sseManager.SendTaskStatusUpdate(taskID, a2a.TaskStatus{
 					State:     u.State,
 					Timestamp: time.Now(),
 					Message:   u.Message,
 				})
-			case ArtifactUpdate:
+			case task.ArtifactUpdate:
 				artifact := a2a.Artifact{
 					ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 					TaskID:    taskID,
@@ -342,13 +343,13 @@ func (s *Server) handleTaskResubscribe(ctx context.Context, w http.ResponseWrite
 	go func() {
 		for update := range updateChan {
 			switch u := update.(type) {
-			case StatusUpdate:
+			case task.StatusUpdate:
 				s.sseManager.SendTaskStatusUpdate(params.TaskID, a2a.TaskStatus{
 					State:     u.State,
 					Timestamp: time.Now(),
 					Message:   u.Message,
 				})
-			case ArtifactUpdate:
+			case task.ArtifactUpdate:
 				artifact := a2a.Artifact{
 					ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 					TaskID:    params.TaskID,

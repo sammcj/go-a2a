@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
-	"github.com/sammcj/go-a2a/server"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // EchoPlugin is an example plugin that echoes back the user's message.
 type EchoPlugin struct{}
 
 // GetTaskHandler returns the task handler function for the echo plugin.
-func (p *EchoPlugin) GetTaskHandler() server.TaskHandler {
-	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
+func (p *EchoPlugin) GetTaskHandler() task.Handler {
+	return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
 		// Create a channel for updates
-		updateChan := make(chan server.TaskYieldUpdate)
+		updateChan := make(chan task.YieldUpdate)
 
 		// Start a goroutine to handle the task
 		go func() {
@@ -45,7 +45,7 @@ func (p *EchoPlugin) GetTaskHandler() server.TaskHandler {
 			}
 
 			// Send a status update with the agent message
-			updateChan <- server.StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State:   a2a.TaskStateCompleted,
 				Message: agentMessage,
 			}
@@ -73,10 +73,10 @@ func (p *EchoPlugin) GetSkills() []a2a.AgentSkill {
 type FileProcessorPlugin struct{}
 
 // GetTaskHandler returns the task handler function for the file processor plugin.
-func (p *FileProcessorPlugin) GetTaskHandler() server.TaskHandler {
-	return func(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
+func (p *FileProcessorPlugin) GetTaskHandler() task.Handler {
+	return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
 		// Create a channel for updates
-		updateChan := make(chan server.TaskYieldUpdate)
+		updateChan := make(chan task.YieldUpdate)
 
 		// Start a goroutine to handle the task
 		go func() {
@@ -113,7 +113,7 @@ func (p *FileProcessorPlugin) GetTaskHandler() server.TaskHandler {
 				}
 
 				// Send a status update with the agent message
-				updateChan <- server.StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State:   a2a.TaskStateInputRequired,
 					Message: agentMessage,
 				}
@@ -136,13 +136,13 @@ func (p *FileProcessorPlugin) GetTaskHandler() server.TaskHandler {
 			}
 
 			// Send a status update with the agent message
-			updateChan <- server.StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State:   a2a.TaskStateCompleted,
 				Message: agentMessage,
 			}
 
 			// Create an artifact with the results
-			updateChan <- server.ArtifactUpdate{
+			updateChan <- task.ArtifactUpdate{
 				Part: a2a.DataPart{
 					Type:     "data",
 					MimeType: "application/json",

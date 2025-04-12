@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
 	"github.com/sammcj/go-a2a/llm/gollm"
 )
 
@@ -36,7 +37,14 @@ func NewServer(opts ...Option) (*Server, error) {
 		if cfg.gollmOptions == nil {
 			return nil, errors.New("gollm options must be set when agent engine not set")
 		}
-		cfg.AgentEngine = NewBasicGollmAgent(*cfg.GollmOptions, cfg.TaskHandler)
+		// Create a gollm adapter with the provided options
+		adapter, err := gollm.NewAdapter(cfg.gollmOptions...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create gollm adapter: %w", err)
+		}
+
+		// Create a basic LLM agent
+		cfg.AgentEngine = NewBasicLLMAgent(adapter, "You are a helpful assistant.")
 	}
 	// TODO: Validate other config options (e.g., address)
 
@@ -90,7 +98,7 @@ func NewServer(opts ...Option) (*Server, error) {
 
 // Start runs the A2A server. It blocks until the server is stopped.
 func (s *Server) Start() error {
-	fmt.Printf("Starting A2A server for agent '%s' at %s%s with options: %+v\n", s.config.AgentCard.ID, s.config.ListenAddress, s.config.A2APathPrefix, s.config.gollmOptions)
+	fmt.Printf("Starting A2A server for agent '%s' at %s%s\n", s.config.AgentCard.ID, s.config.ListenAddress, s.config.A2APathPrefix)
 	err := s.httpServer.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("failed to start HTTP server: %w", err)

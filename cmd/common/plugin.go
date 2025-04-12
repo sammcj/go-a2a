@@ -8,13 +8,13 @@ import (
 	"plugin"
 
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // TaskHandlerPlugin represents a plugin that provides a task handler.
 type TaskHandlerPlugin interface {
-	GetTaskHandler() func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error)
-
-	GetSkills() []a2a.AgentSkill 
+	GetTaskHandler() task.Handler
+	GetSkills() []a2a.AgentSkill
 }
 
 // LoadPlugin loads a plugin from the specified path.
@@ -63,9 +63,9 @@ func LoadPlugins(dir string) ([]TaskHandlerPlugin, error) {
 
 // MergeTaskHandlers merges multiple task handlers into a single task handler.
 // The resulting task handler will delegate to the appropriate plugin based on the skill ID.
-func MergeTaskHandlers(plugins []TaskHandlerPlugin) func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
+func MergeTaskHandlers(plugins []TaskHandlerPlugin) task.Handler {
 	// Create a map of skill ID to task handler
-	handlers := make(map[string]func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error))
+	handlers := make(map[string]task.Handler)
 	for _, p := range plugins{
 		handler := p.GetTaskHandler()
 		for _, skill := range p.GetSkills() {
@@ -74,7 +74,7 @@ func MergeTaskHandlers(plugins []TaskHandlerPlugin) func(ctx context.Context, ta
 	}
 
 	// Return a task handler that delegates to the appropriate plugin
-	return func(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
+	return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
 		// Get the skill ID from the message or use a default
 		skillID := ""
 		// Try to extract skill ID from the message metadata if available

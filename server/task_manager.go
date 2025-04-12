@@ -7,44 +7,8 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
-
-// TaskContext provides context to the TaskHandler.
-type TaskContext struct {
-	Task        a2a.Task     // Snapshot of task state (pass a copy)
-	UserMessage a2a.Message  // Triggering message
-	History     []a2a.Message // Snapshot of history (pass a copy)
-	// Cancellation is checked via the context.Context passed to the handler
-}
-
-// TaskYieldUpdate represents status or artifact updates yielded by a handler.
-type TaskYieldUpdate interface {
-	isTaskYieldUpdate() // Marker method
-}
-
-// StatusUpdate represents a status change yielded by the handler.
-// The server will add the timestamp.
-type StatusUpdate struct {
-	State   a2a.TaskState
-	Message *a2a.Message // Optional agent message accompanying the status
-}
-
-func (s StatusUpdate) isTaskYieldUpdate() {}
-
-// ArtifactUpdate represents an artifact yielded by the handler.
-// The server will add the timestamp and ID.
-type ArtifactUpdate struct {
-	Part     a2a.Part
-	Metadata interface{}
-}
-
-func (a ArtifactUpdate) isTaskYieldUpdate() {}
-
-// TaskHandler defines the function signature for application-specific task execution logic.
-// It's invoked by the TaskManager implementation.
-// It receives context and returns a channel for yielding updates and an error.
-// Closing the channel indicates completion.
-type TaskHandler func(ctx context.Context, taskContext TaskContext) (<-chan TaskYieldUpdate, error)
 
 // TaskManager defines the interface for task management operations.
 type TaskManager interface {
@@ -52,7 +16,7 @@ type TaskManager interface {
 	OnSendTask(ctx context.Context, params *a2a.TaskSendParams) (*a2a.Task, error)
 
 	// Handles streaming task send/resume. Returns a channel for updates.
-	OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan TaskYieldUpdate, error)
+	OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan task.YieldUpdate, error)
 
 	// Handles task retrieval.
 	OnGetTask(ctx context.Context, params *a2a.TaskQueryParams) (*a2a.Task, error)
@@ -67,7 +31,7 @@ type TaskManager interface {
 	OnGetTaskPushNotification(ctx context.Context, params *a2a.TaskIdParams) (*a2a.PushNotificationConfig, error)
 
 	// Handles resubscribing to a task stream.
-	OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan TaskYieldUpdate, error)
+	OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan task.YieldUpdate, error)
 
 	// (Potentially other internal methods for state management)
 }
@@ -76,14 +40,14 @@ type TaskManager interface {
 type InMemoryTaskManager struct {
 	tasks       map[string]*a2a.Task                      // Map of task ID to task
 	pushConfigs map[string]*a2a.PushNotificationConfig    // Map of task ID to push notification config
-	taskHandler TaskHandler                               // Application-specific task handler
+	taskHandler task.Handler                              // Application-specific task handler
 	pushNotifier *PushNotifier                            // Push notification sender
 	mu          sync.RWMutex                              // Mutex for thread safety
 	// TODO: Add fields for SSE connections, active tasks, etc.
 }
 
 // NewInMemoryTaskManager creates a new InMemoryTaskManager.
-func NewInMemoryTaskManager(handler TaskHandler) *InMemoryTaskManager {
+func NewInMemoryTaskManager(handler task.Handler) *InMemoryTaskManager {
 	if handler == nil {
 		// This should be caught earlier, but just in case
 		panic("TaskHandler is required for InMemoryTaskManager")
@@ -102,7 +66,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 	// Check if this is a resume (taskId provided)
 	if params.TaskID != nil {
 		tm.mu.RLock()
-		task, exists := tm.tasks[*params.TaskID]
+		existingTask, exists := tm.tasks[*params.TaskID]
 		tm.mu.RUnlock()
 
 		if !exists {
@@ -112,10 +76,9 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 		// TODO: Validate session ID if provided
 
 		// Create a task context
-		taskCtx := TaskContext{
-			Task:        *task,
+		taskCtx := task.Context{
+			TaskID:      *params.TaskID,
 			UserMessage: params.Message,
-			History:     append(task.History, params.Message),
 		}
 
 		// Start a goroutine to handle the task
@@ -125,7 +88,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 			if err != nil {
 				// Update task status to failed
 				tm.mu.Lock()
-				task.Status = a2a.TaskStatus{
+				existingTask.Status = a2a.TaskStatus{
 					State:     a2a.TaskStateFailed,
 					Timestamp: time.Now(),
 					Message: &a2a.Message{
@@ -146,7 +109,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 				// Send push notification if configured
 				if hasPushConfig && tm.pushNotifier != nil {
-					if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
+					if err := tm.pushNotifier.SendStatusUpdate(context.Background(), existingTask, config); err != nil {
 						// Just log the error for now
 						fmt.Printf("Failed to send push notification for task %s: %v\n", *params.TaskID, err)
 					}
@@ -159,15 +122,15 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 			for update := range handlerUpdateChan {
 				// Update task state in memory and send push notifications if configured
 				switch u := update.(type) {
-				case StatusUpdate:
+				case task.StatusUpdate:
 					tm.mu.Lock()
-					task.Status = a2a.TaskStatus{
+					existingTask.Status = a2a.TaskStatus{
 						State:     u.State,
 						Timestamp: time.Now(),
 						Message:   u.Message,
 					}
 					if u.Message != nil {
-						task.History = append(task.History, *u.Message)
+						existingTask.History = append(existingTask.History, *u.Message)
 					}
 
 					// Get push notification config (if any)
@@ -176,13 +139,13 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 					// Send push notification if configured
 					if hasPushConfig && tm.pushNotifier != nil {
-						if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
+						if err := tm.pushNotifier.SendStatusUpdate(context.Background(), existingTask, config); err != nil {
 							// Just log the error for now
 							fmt.Printf("Failed to send push notification for task %s: %v\n", *params.TaskID, err)
 						}
 					}
 
-				case ArtifactUpdate:
+				case task.ArtifactUpdate:
 					artifact := a2a.Artifact{
 						ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 						TaskID:    *params.TaskID,
@@ -192,7 +155,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 					}
 
 					tm.mu.Lock()
-					task.Artifacts = append(task.Artifacts, artifact)
+					existingTask.Artifacts = append(existingTask.Artifacts, artifact)
 
 					// Get push notification config (if any)
 					config, hasPushConfig := tm.pushConfigs[*params.TaskID]
@@ -200,7 +163,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 					// Send push notification if configured
 					if hasPushConfig && tm.pushNotifier != nil {
-						if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), task, artifact, config); err != nil {
+						if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), existingTask, artifact, config); err != nil {
 							// Just log the error for now
 							fmt.Printf("Failed to send push notification for artifact %s: %v\n", artifact.ID, err)
 						}
@@ -209,14 +172,14 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 			}
 		}()
 
-		return task, nil
+		return existingTask, nil
 	}
 
 	// Create a new task
 	taskID := generateTaskID()
 	now := time.Now()
 
-	task := &a2a.Task{
+	newTask := &a2a.Task{
 		ID:        taskID,
 		SessionID: params.SessionID, // May be nil
 		Status: a2a.TaskStatus{
@@ -229,21 +192,20 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 	// Store the task
 	tm.mu.Lock()
-	tm.tasks[taskID] = task
+	tm.tasks[taskID] = newTask
 	tm.mu.Unlock()
 
 	// Create a task context
-	taskCtx := TaskContext{
-		Task:        *task,
+	taskCtx := task.Context{
+		TaskID:      taskID,
 		UserMessage: params.Message,
-		History:     task.History,
 	}
 
 	// Start a goroutine to handle the task
 	go func() {
 		// Update task status to working
 		tm.mu.Lock()
-		task.Status = a2a.TaskStatus{
+		newTask.Status = a2a.TaskStatus{
 			State:     a2a.TaskStateWorking,
 			Timestamp: time.Now(),
 		}
@@ -254,7 +216,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 		if err != nil {
 			// Update task status to failed
 			tm.mu.Lock()
-			task.Status = a2a.TaskStatus{
+			newTask.Status = a2a.TaskStatus{
 				State:     a2a.TaskStateFailed,
 				Timestamp: time.Now(),
 				Message: &a2a.Message{
@@ -275,7 +237,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 			// Send push notification if configured
 			if hasPushConfig && tm.pushNotifier != nil {
-				if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
+				if err := tm.pushNotifier.SendStatusUpdate(context.Background(), newTask, config); err != nil {
 					// Just log the error for now
 					fmt.Printf("Failed to send push notification for task %s: %v\n", taskID, err)
 				}
@@ -288,15 +250,15 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 		for update := range handlerUpdateChan {
 			// Update task state in memory and send push notifications if configured
 			switch u := update.(type) {
-			case StatusUpdate:
+			case task.StatusUpdate:
 				tm.mu.Lock()
-				task.Status = a2a.TaskStatus{
+				newTask.Status = a2a.TaskStatus{
 					State:     u.State,
 					Timestamp: time.Now(),
 					Message:   u.Message,
 				}
 				if u.Message != nil {
-					task.History = append(task.History, *u.Message)
+					newTask.History = append(newTask.History, *u.Message)
 				}
 
 				// Get push notification config (if any)
@@ -305,13 +267,13 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 				// Send push notification if configured
 				if hasPushConfig && tm.pushNotifier != nil {
-					if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
+					if err := tm.pushNotifier.SendStatusUpdate(context.Background(), newTask, config); err != nil {
 						// Just log the error for now
 						fmt.Printf("Failed to send push notification for task %s: %v\n", taskID, err)
 					}
 				}
 
-			case ArtifactUpdate:
+			case task.ArtifactUpdate:
 				artifact := a2a.Artifact{
 					ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 					TaskID:    taskID,
@@ -321,7 +283,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 				}
 
 				tm.mu.Lock()
-				task.Artifacts = append(task.Artifacts, artifact)
+				newTask.Artifacts = append(newTask.Artifacts, artifact)
 
 				// Get push notification config (if any)
 				config, hasPushConfig := tm.pushConfigs[taskID]
@@ -329,7 +291,7 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 				// Send push notification if configured
 				if hasPushConfig && tm.pushNotifier != nil {
-					if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), task, artifact, config); err != nil {
+					if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), newTask, artifact, config); err != nil {
 						// Just log the error for now
 						fmt.Printf("Failed to send push notification for artifact %s: %v\n", artifact.ID, err)
 					}
@@ -338,18 +300,18 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 		}
 	}()
 
-	return task, nil
+	return newTask, nil
 }
 
 // OnSendTaskSubscribe implements TaskManager.OnSendTaskSubscribe.
-func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan TaskYieldUpdate, error) {
+func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan task.YieldUpdate, error) {
 	// Create a channel for updates
-	updateChan := make(chan TaskYieldUpdate)
+	updateChan := make(chan task.YieldUpdate)
 
 	// Check if this is a resume (taskId provided)
 	if params.TaskID != nil {
 		tm.mu.RLock()
-		task, exists := tm.tasks[*params.TaskID]
+		taskObj, exists := tm.tasks[*params.TaskID]
 		tm.mu.RUnlock()
 
 		if !exists {
@@ -363,16 +325,15 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 			defer close(updateChan)
 
 			// Send the current status as the first update
-			updateChan <- StatusUpdate{
-				State:   task.Status.State,
-				Message: task.Status.Message,
+			updateChan <- task.StatusUpdate{
+				State:   taskObj.Status.State,
+				Message: taskObj.Status.Message,
 			}
 
 			// Create a task context
-			taskCtx := TaskContext{
-				Task:        *task,
+			taskCtx := task.Context{
+				TaskID:      *params.TaskID,
 				UserMessage: params.Message,
-				History:     append(task.History, params.Message),
 			}
 
 			// Call the task handler
@@ -380,7 +341,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 			if err != nil {
 				// Update task status to failed
 				tm.mu.Lock()
-				task.Status = a2a.TaskStatus{
+				taskObj.Status = a2a.TaskStatus{
 					State:     a2a.TaskStateFailed,
 					Timestamp: time.Now(),
 					Message: &a2a.Message{
@@ -397,7 +358,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 				tm.mu.Unlock()
 
 				// Send a failed status update
-				updateChan <- StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State: a2a.TaskStateFailed,
 					Message: &a2a.Message{
 						Role:      a2a.RoleSystem,
@@ -417,15 +378,15 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 			for update := range handlerUpdateChan {
 				// Update task state in memory and send push notifications if configured
 				switch u := update.(type) {
-				case StatusUpdate:
+				case task.StatusUpdate:
 					tm.mu.Lock()
-					task.Status = a2a.TaskStatus{
+					taskObj.Status = a2a.TaskStatus{
 						State:     u.State,
 						Timestamp: time.Now(),
 						Message:   u.Message,
 					}
 					if u.Message != nil {
-						task.History = append(task.History, *u.Message)
+						taskObj.History = append(taskObj.History, *u.Message)
 					}
 
 					// Get push notification config (if any)
@@ -436,14 +397,14 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 					if hasPushConfig && tm.pushNotifier != nil {
 						// Send in a goroutine to avoid blocking
 						go func() {
-							if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
+							if err := tm.pushNotifier.SendStatusUpdate(context.Background(), taskObj, config); err != nil {
 								// Just log the error for now
 								fmt.Printf("Failed to send push notification for task %s: %v\n", *params.TaskID, err)
 							}
 						}()
 					}
 
-				case ArtifactUpdate:
+				case task.ArtifactUpdate:
 					artifact := a2a.Artifact{
 						ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 						TaskID:    *params.TaskID,
@@ -453,7 +414,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 					}
 
 					tm.mu.Lock()
-					task.Artifacts = append(task.Artifacts, artifact)
+					taskObj.Artifacts = append(taskObj.Artifacts, artifact)
 
 					// Get push notification config (if any)
 					config, hasPushConfig := tm.pushConfigs[*params.TaskID]
@@ -463,7 +424,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 					if hasPushConfig && tm.pushNotifier != nil {
 						// Send in a goroutine to avoid blocking
 						go func(a a2a.Artifact) {
-							if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), task, a, config); err != nil {
+							if err := tm.pushNotifier.SendArtifactUpdate(context.Background(), taskObj, a, config); err != nil {
 								// Just log the error for now
 								fmt.Printf("Failed to send push notification for artifact %s: %v\n", a.ID, err)
 							}
@@ -483,7 +444,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 	taskID := generateTaskID()
 	now := time.Now()
 
-	task := &a2a.Task{
+	taskObj := &a2a.Task{
 		ID:        taskID,
 		SessionID: params.SessionID, // May be nil
 		Status: a2a.TaskStatus{
@@ -496,7 +457,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 
 	// Store the task
 	tm.mu.Lock()
-	tm.tasks[taskID] = task
+	tm.tasks[taskID] = taskObj
 	tm.mu.Unlock()
 
 	// Start a goroutine to handle the task
@@ -504,28 +465,27 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 		defer close(updateChan)
 
 		// Send the initial status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateSubmitted,
 		}
 
 		// Update task status to working
 		tm.mu.Lock()
-		task.Status = a2a.TaskStatus{
+		taskObj.Status = a2a.TaskStatus{
 			State:     a2a.TaskStateWorking,
 			Timestamp: time.Now(),
 		}
 		tm.mu.Unlock()
 
 		// Send a working status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateWorking,
 		}
 
 		// Create a task context
-		taskCtx := TaskContext{
-			Task:        *task,
+		taskCtx := task.Context{
+			TaskID:      taskID,
 			UserMessage: params.Message,
-			History:     task.History,
 		}
 
 		// Call the task handler
@@ -533,7 +493,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 		if err != nil {
 			// Update task status to failed
 			tm.mu.Lock()
-			task.Status = a2a.TaskStatus{
+			taskObj.Status = a2a.TaskStatus{
 				State:     a2a.TaskStateFailed,
 				Timestamp: time.Now(),
 				Message: &a2a.Message{
@@ -550,7 +510,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 			tm.mu.Unlock()
 
 			// Send a failed status update
-			updateChan <- StatusUpdate{
+			updateChan <- task.StatusUpdate{
 				State: a2a.TaskStateFailed,
 				Message: &a2a.Message{
 					Role:      a2a.RoleSystem,
@@ -570,18 +530,18 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 		for update := range handlerUpdateChan {
 			// Update task state in memory
 			switch u := update.(type) {
-			case StatusUpdate:
+			case task.StatusUpdate:
 				tm.mu.Lock()
-				task.Status = a2a.TaskStatus{
+				taskObj.Status = a2a.TaskStatus{
 					State:     u.State,
 					Timestamp: time.Now(),
 					Message:   u.Message,
 				}
 				if u.Message != nil {
-					task.History = append(task.History, *u.Message)
+					taskObj.History = append(taskObj.History, *u.Message)
 				}
 				tm.mu.Unlock()
-			case ArtifactUpdate:
+			case task.ArtifactUpdate:
 				artifact := a2a.Artifact{
 					ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
 					TaskID:    taskID,
@@ -590,7 +550,7 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 					Metadata:  u.Metadata,
 				}
 				tm.mu.Lock()
-				task.Artifacts = append(task.Artifacts, artifact)
+				taskObj.Artifacts = append(taskObj.Artifacts, artifact)
 				tm.mu.Unlock()
 			}
 
@@ -604,74 +564,30 @@ func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *
 
 // OnGetTask implements TaskManager.OnGetTask.
 func (tm *InMemoryTaskManager) OnGetTask(ctx context.Context, params *a2a.TaskQueryParams) (*a2a.Task, error) {
+	// Check if the task exists
 	tm.mu.RLock()
-	task, exists := tm.tasks[params.TaskID]
+	defer tm.mu.RUnlock()
+
+	taskObj, exists := tm.tasks[params.TaskID]
+	if !exists {
+		return nil, a2a.ErrTaskNotFound(params.TaskID)
+	}
+
+	return taskObj, nil
+}
+
+// OnSetTaskPushNotification implements TaskManager.OnSetTaskPushNotification.
+func (tm *InMemoryTaskManager) OnSetTaskPushNotification(ctx context.Context, params *a2a.TaskPushNotificationConfigParams) (*a2a.PushNotificationConfig, error) {
+	// Check if the task exists
+	tm.mu.RLock()
+	_, exists := tm.tasks[params.TaskID]
 	tm.mu.RUnlock()
 
 	if !exists {
 		return nil, a2a.ErrTaskNotFound(params.TaskID)
 	}
 
-	return task, nil
-}
-
-// OnCancelTask implements TaskManager.OnCancelTask.
-func (tm *InMemoryTaskManager) OnCancelTask(ctx context.Context, params *a2a.TaskIdParams) (*a2a.Task, error) {
-	tm.mu.Lock()
-
-	task, exists := tm.tasks[params.TaskID]
-	if !exists {
-		tm.mu.Unlock()
-		return nil, a2a.ErrTaskNotFound(params.TaskID)
-	}
-
-	// Update task status to cancelled
-	task.Status = a2a.TaskStatus{
-		State:     a2a.TaskStateCancelled,
-		Timestamp: time.Now(),
-		Message: &a2a.Message{
-			Role:      a2a.RoleSystem,
-			Timestamp: time.Now(),
-			Parts: []a2a.Part{
-				a2a.TextPart{
-					Type: "text",
-					Text: "Task cancelled by client",
-				},
-			},
-		},
-	}
-
-	// Get push notification config (if any)
-	config, hasPushConfig := tm.pushConfigs[params.TaskID]
-	tm.mu.Unlock()
-
-	// Send push notification if configured
-	if hasPushConfig && tm.pushNotifier != nil {
-		// Send in a goroutine to avoid blocking
-		go func() {
-			if err := tm.pushNotifier.SendStatusUpdate(context.Background(), task, config); err != nil {
-				// Just log the error for now
-				fmt.Printf("Failed to send push notification for cancelled task %s: %v\n", params.TaskID, err)
-			}
-		}()
-	}
-
-	// TODO: Cancel any active goroutines for this task
-
-	return task, nil
-}
-
-// OnSetTaskPushNotification implements TaskManager.OnSetTaskPushNotification.
-func (tm *InMemoryTaskManager) OnSetTaskPushNotification(ctx context.Context, params *a2a.TaskPushNotificationConfigParams) (*a2a.PushNotificationConfig, error) {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
-
-	// Check if task exists
-	if _, exists := tm.tasks[params.TaskID]; !exists {
-		return nil, a2a.ErrTaskNotFound(params.TaskID)
-	}
-
-	// Create push notification config
+	// Create a push notification config from the params
 	config := &a2a.PushNotificationConfig{
 		TaskID:           params.TaskID,
 		URL:              params.URL,
@@ -680,39 +596,87 @@ func (tm *InMemoryTaskManager) OnSetTaskPushNotification(ctx context.Context, pa
 		IncludeArtifacts: params.IncludeArtifacts,
 	}
 
-	// Store the config
+	// Store the push notification config
+	tm.mu.Lock()
 	tm.pushConfigs[params.TaskID] = config
+	tm.mu.Unlock()
 
 	return config, nil
 }
 
 // OnGetTaskPushNotification implements TaskManager.OnGetTaskPushNotification.
 func (tm *InMemoryTaskManager) OnGetTaskPushNotification(ctx context.Context, params *a2a.TaskIdParams) (*a2a.PushNotificationConfig, error) {
+	// Check if the task exists
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
 
-	// Check if task exists
-	if _, exists := tm.tasks[params.TaskID]; !exists {
+	_, exists := tm.tasks[params.TaskID]
+	if !exists {
 		return nil, a2a.ErrTaskNotFound(params.TaskID)
 	}
 
-	// Get push notification config
+	// Get push notification config (if any)
 	config, exists := tm.pushConfigs[params.TaskID]
 	if !exists {
-		return nil, fmt.Errorf("no push notification configuration for task %s", params.TaskID)
+		return nil, fmt.Errorf("push notification config not found for task %s", params.TaskID)
 	}
 
 	return config, nil
 }
 
+// OnCancelTask implements TaskManager.OnCancelTask.
+func (tm *InMemoryTaskManager) OnCancelTask(ctx context.Context, params *a2a.TaskIdParams) (*a2a.Task, error) {
+	// Check if the task exists
+	tm.mu.RLock()
+	taskObj, exists := tm.tasks[params.TaskID]
+	tm.mu.RUnlock()
+
+	if !exists {
+		return nil, a2a.ErrTaskNotFound(params.TaskID)
+	}
+
+	// Update task status to cancelled
+	tm.mu.Lock()
+	taskObj.Status = a2a.TaskStatus{
+		State:     a2a.TaskStateCancelled,
+		Timestamp: time.Now(),
+		Message: &a2a.Message{
+			Role:      a2a.RoleSystem,
+			Timestamp: time.Now(),
+			Parts: []a2a.Part{
+				a2a.TextPart{
+					Type: "text",
+					Text: "Task cancelled by user",
+				},
+			},
+		},
+	}
+	tm.mu.Unlock()
+
+	// Get push notification config (if any)
+	tm.mu.RLock()
+	config, hasPushConfig := tm.pushConfigs[params.TaskID]
+	tm.mu.RUnlock()
+
+	// Send push notification if configured
+	if hasPushConfig && tm.pushNotifier != nil {
+		if err := tm.pushNotifier.SendStatusUpdate(context.Background(), taskObj, config); err != nil {
+			// Just log the error for now
+			fmt.Printf("Failed to send push notification for task %s: %v\n", params.TaskID, err)
+		}
+	}
+
+	return taskObj, nil
+}
+
 // OnResubscribeToTask implements TaskManager.OnResubscribeToTask.
-func (tm *InMemoryTaskManager) OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan TaskYieldUpdate, error) {
+func (tm *InMemoryTaskManager) OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan task.YieldUpdate, error) {
 	// Create a channel for updates
-	updateChan := make(chan TaskYieldUpdate)
+	updateChan := make(chan task.YieldUpdate)
 
 	// Check if the task exists
 	tm.mu.RLock()
-	task, exists := tm.tasks[params.TaskID]
+	taskObj, exists := tm.tasks[params.TaskID]
 	tm.mu.RUnlock()
 
 	if !exists {
@@ -724,15 +688,15 @@ func (tm *InMemoryTaskManager) OnResubscribeToTask(ctx context.Context, params *
 		defer close(updateChan)
 
 		// Send the current status as the first update
-		updateChan <- StatusUpdate{
-			State:   task.Status.State,
-			Message: task.Status.Message,
+		updateChan <- task.StatusUpdate{
+			State:   taskObj.Status.State,
+			Message: taskObj.Status.Message,
 		}
 
 		// If the task is already completed, failed, or cancelled, just return
-		if task.Status.State == a2a.TaskStateCompleted ||
-			task.Status.State == a2a.TaskStateFailed ||
-			task.Status.State == a2a.TaskStateCancelled {
+		if taskObj.Status.State == a2a.TaskStateCompleted ||
+			taskObj.Status.State == a2a.TaskStateFailed ||
+			taskObj.Status.State == a2a.TaskStateCancelled {
 			return
 		}
 
@@ -750,11 +714,11 @@ func (tm *InMemoryTaskManager) OnResubscribeToTask(ctx context.Context, params *
 			case <-ticker.C:
 				// Check the task status
 				tm.mu.RLock()
-				currentStatus := task.Status
+				currentStatus := taskObj.Status
 				tm.mu.RUnlock()
 
 				// Send an update if the status has changed
-				updateChan <- StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State:   currentStatus.State,
 					Message: currentStatus.Message,
 				}

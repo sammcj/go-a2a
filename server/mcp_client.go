@@ -8,6 +8,7 @@ import (
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/llm"
+	"github.com/sammcj/go-a2a/pkg/task"
 )
 
 // MCPClient defines the interface for interacting with MCP servers.
@@ -283,8 +284,8 @@ func NewMCPToolAugmentedAgent(llmInterface llm.LLMInterface, mcpClient MCPClient
 }
 
 // ProcessTask implements AgentEngine.ProcessTask.
-func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error) {
-	updateChan := make(chan TaskYieldUpdate)
+func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
+	updateChan := make(chan task.YieldUpdate)
 
 	go func() {
 		defer close(updateChan)
@@ -300,7 +301,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 		}
 
 		// Send a working status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateWorking,
 		}
 
@@ -338,7 +339,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 						},
 					},
 				}
-				updateChan <- StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State:   a2a.TaskStateWorking,
 					Message: &responseMessage,
 				}
@@ -358,7 +359,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 								},
 							},
 						}
-						updateChan <- StatusUpdate{
+						updateChan <- task.StatusUpdate{
 							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
@@ -378,7 +379,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 								},
 							},
 						}
-						updateChan <- StatusUpdate{
+						updateChan <- task.StatusUpdate{
 							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
@@ -386,7 +387,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 					}
 
 					// Send the tool result as an artifact update
-					updateChan <- ArtifactUpdate{
+					updateChan <- task.ArtifactUpdate{
 						Part: a2a.TextPart{
 							Type: "text",
 							Text: resultStr,
@@ -410,7 +411,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 								},
 							},
 						}
-						updateChan <- StatusUpdate{
+						updateChan <- task.StatusUpdate{
 							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
@@ -427,7 +428,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 							},
 						},
 					}
-					updateChan <- StatusUpdate{
+					updateChan <- task.StatusUpdate{
 						State:   a2a.TaskStateWorking,
 						Message: &responseMessage,
 					}
@@ -444,7 +445,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 						},
 					},
 				}
-				updateChan <- StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State:   a2a.TaskStateFailed,
 					Message: &errorMessage,
 				}
@@ -461,7 +462,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 						},
 					},
 				}
-				updateChan <- StatusUpdate{
+				updateChan <- task.StatusUpdate{
 					State:   a2a.TaskStateCancelled,
 					Message: &errorMessage,
 				}
@@ -470,7 +471,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 		}
 
 		// Send a completed status update
-		updateChan <- StatusUpdate{
+		updateChan <- task.StatusUpdate{
 			State: a2a.TaskStateCompleted,
 		}
 	}()
