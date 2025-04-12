@@ -72,4 +72,4 @@ func (p *EchoPlugin) GetSkills() []a2a.AgentSkill {
 
 // Plugin is the exported symbol that the server will look for.
 // It must implement common.TaskHandlerPlugin interface
-var Plugin common.TaskHandlerPlugin = &EchoPlugin{}
+var EchoPluginInstance common.TaskHandlerPlugin = &EchoPlugin{}
