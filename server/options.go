@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/llm"
+	"github.com/sammcj/go-a2a/llm/gollm"
 )
 
 // AuthValidator is a function that validates authentication for requests.
@@ -17,6 +19,7 @@ type Config struct {
 	AgentCardPath string         // Path to serve the agent card (e.g., "/.well-known/agent.json")
 	TaskManager   TaskManager    // The task manager implementation
 	TaskHandler   TaskHandler    // The application-specific task handler logic
+	AgentEngine   AgentEngine    // The agent engine implementation
 	AuthValidator AuthValidator  // Optional authentication validator function
 	// TODO: Add fields for TLS config, middleware, SSE config, etc.
 }
@@ -77,6 +80,67 @@ func WithTaskHandler(handler TaskHandler) Option {
 func WithAuthValidator(validator AuthValidator) Option {
 	return func(c *Config) {
 		c.AuthValidator = validator
+	}
+}
+
+// WithAgentEngine sets a custom AgentEngine implementation.
+func WithAgentEngine(engine AgentEngine) Option {
+	return func(c *Config) {
+		c.AgentEngine = engine
+	}
+}
+
+// WithBasicLLMAgent creates a BasicLLMAgent with the provided LLM interface and system prompt.
+func WithBasicLLMAgent(llmInterface llm.LLMInterface, systemPrompt string) Option {
+	return func(c *Config) {
+		c.AgentEngine = NewBasicLLMAgent(llmInterface, systemPrompt)
+	}
+}
+
+// WithBasicGollmAgent creates a BasicLLMAgent with a gollm adapter.
+func WithBasicGollmAgent(provider, model, apiKey, systemPrompt string) Option {
+	return func(c *Config) {
+		// Create gollm adapter
+		adapter, err := gollm.NewAdapter(
+			gollm.WithProvider(provider),
+			gollm.WithModel(model),
+			gollm.WithAPIKey(apiKey),
+		)
+		if err != nil {
+			// Log error and return without setting the agent engine
+			// TODO: Consider a better way to handle errors in options
+			return
+		}
+
+		// Create agent
+		c.AgentEngine = NewBasicLLMAgent(adapter, systemPrompt)
+	}
+}
+
+// WithToolAugmentedAgent creates a ToolAugmentedAgent with the provided LLM interface and tools.
+func WithToolAugmentedAgent(llmInterface llm.LLMInterface, tools []Tool) Option {
+	return func(c *Config) {
+		c.AgentEngine = NewToolAugmentedAgent(llmInterface, tools)
+	}
+}
+
+// WithToolAugmentedGollmAgent creates a ToolAugmentedAgent with a gollm adapter.
+func WithToolAugmentedGollmAgent(provider, model, apiKey string, tools []Tool) Option {
+	return func(c *Config) {
+		// Create gollm adapter
+		adapter, err := gollm.NewAdapter(
+			gollm.WithProvider(provider),
+			gollm.WithModel(model),
+			gollm.WithAPIKey(apiKey),
+		)
+		if err != nil {
+			// Log error and return without setting the agent engine
+			// TODO: Consider a better way to handle errors in options
+			return
+		}
+
+		// Create agent
+		c.AgentEngine = NewToolAugmentedAgent(adapter, tools)
 	}
 }
 
