@@ -1,0 +1,29 @@
+{
+  "listenAddress": ":8080",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "pluginPath": "./plugins",
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "echo-agent",
+    "name": "Echo Agent",
+    "description": "A simple agent that echoes back messages",
+    "provider": {
+      "name": "go-a2a Example",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "echo",
+        "name": "Echo",
+        "description": "Echoes back the input message"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    }
+  }
+}

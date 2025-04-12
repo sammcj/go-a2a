@@ -1,0 +1,34 @@
+{
+  "listenAddress": ":8081",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "llmConfig": {
+    "provider": "ollama",
+    "baseUrl": "http://localhost:11434",
+    "model": "gemma3:4b-it-q8_0",
+    "systemPrompt": "You are a helpful assistant that responds to user queries."
+  },
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "llm-assistant",
+    "name": "LLM Assistant",
+    "description": "An intelligent assistant powered by a local LLM",
+    "provider": {
+      "name": "go-a2a Example",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "general-assistance",
+        "name": "General Assistance",
+        "description": "Provides helpful responses to general queries"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    }
+  }
+}
