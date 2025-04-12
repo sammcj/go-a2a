@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/cmd/common"
 	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/pkg/task"
@@ -65,8 +66,8 @@ func main() {
 
 	// Load LLM config
 	var llmConfig config.LLMConfig
-	if cfg.LLMConfig.Provider != "" {
-		llmConfig = cfg.LLMConfig
+	if cfg.LLMConfig != nil {
+		llmConfig = *cfg.LLMConfig
 	} else {
 		llmConfig = common.DefaultLLMConfig()
 	}
@@ -76,21 +77,30 @@ func main() {
 		logger.Fatal("Failed to create gollm options: %v", err)
 	}
 
-	var agentCard *config.AgentCardConfig
+	// Load and convert agent card configuration
+	var a2aAgentCard *a2a.AgentCard
 	if *agentCardFile != "" {
 		logger.Info("Loading agent card from %s", *agentCardFile)
 		loadedCard, err := common.LoadConfig[config.AgentCardConfig](*agentCardFile)
 		if err != nil {
 			logger.Fatal("Failed to load agent card: %v", err)
 		}
-		agentCard = loadedCard
+		// Convert config.AgentCardConfig to a2a.AgentCard
+		a2aAgentCard = common.ConvertToAgentCard(&common.AgentCardConfig{
+			A2AVersion:       loadedCard.A2AVersion,
+			ID:               loadedCard.ID,
+			Name:             loadedCard.Name,
+			Description:      loadedCard.Description,
+			IconURI:          loadedCard.IconURI,
+			ContactEmail:     loadedCard.ContactEmail,
+			LegalInfoURI:     loadedCard.LegalInfoURI,
+			HomepageURI:      loadedCard.HomepageURI,
+			DocumentationURI: loadedCard.DocumentationURI,
+		})
 	} else {
 		// If no agent card file is specified, use the agent card from the server configuration
-		agentCard = &cfg.ServerConfig.AgentCard
+		a2aAgentCard = common.ConvertToAgentCard(&cfg.AgentCard)
 	}
-
-	// Convert agent card config to A2A format
-	a2aAgentCard := common.ConvertToAgentCard(*agentCard)
 
 	// Load plugins
 	var taskHandler task.Handler
@@ -164,7 +174,7 @@ func saveDefaultConfig(path string) error {
 
 // saveDefaultAgentCard saves a default agent card file.
 func saveDefaultAgentCard(path string) error {
-	cfg := common.DefaultServerConfig().ServerConfig.AgentCard
+	cfg := common.DefaultServerConfig().AgentCard
 	return common.SaveConfig(cfg, path)
 }
 

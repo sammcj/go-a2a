@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/sammcj/go-a2a/cmd/common"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -39,38 +41,38 @@ func TestLoadConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		filePath    string
-		expected    server.ServerConfig
+		expected    common.ServerConfig
 		expectedErr bool
 	}{
 		{
 			name:        "Load JSON config",
 			filePath:    jsonFile,
-			expected:    ServerConfig{ListenAddress: ":8081", LogLevel: "debug"},
+			expected:    common.ServerConfig{ListenAddress: ":8081", LogLevel: "debug"},
 			expectedErr: false,
 		},
 		{
 			name:        "Load YAML config",
 			filePath:    yamlFile,
-			expected:    ServerConfig{ListenAddress: ":8082", LogLevel: "info"},
+			expected:    common.ServerConfig{ListenAddress: ":8082", LogLevel: "info"},
 			expectedErr: false,
 		},
 		{
 			name:        "File not found",
 			filePath:    filepath.Join(tempDir, "notfound.json"),
-			expected:    ServerConfig{},
+			expected:    common.ServerConfig{},
 			expectedErr: true,
 		},
 		{
 			name:        "Invalid file content",
 			filePath:    invalidFile,
-			expected:    ServerConfig{},
+			expected:    common.ServerConfig{},
 			expectedErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LoadConfig[ServerConfig](tt.filePath)
+			got, err := common.LoadConfig[common.ServerConfig](tt.filePath)
 			if (err != nil) != tt.expectedErr {
 				t.Errorf("LoadConfig() error = %v, expectedErr %v", err, tt.expectedErr)
 				return
@@ -95,32 +97,32 @@ func TestSaveConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		filePath    string
-		config      ServerConfig
+		config      common.ServerConfig
 		expectedErr bool
 	}{
 		{
 			name:        "Save JSON config",
 			filePath:    jsonFile,
-			config:      ServerConfig{ListenAddress: ":8083", LogLevel: "warn"},
+			config:      common.ServerConfig{ListenAddress: ":8083", LogLevel: "warn"},
 			expectedErr: false,
 		},
 		{
 			name:        "Save YAML config",
 			filePath:    yamlFile,
-			config:      ServerConfig{ListenAddress: ":8084", LogLevel: "error"},
+			config:      common.ServerConfig{ListenAddress: ":8084", LogLevel: "error"},
 			expectedErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := SaveConfig(tt.config, tt.filePath)
+			err := common.SaveConfig(tt.config, tt.filePath)
 			if (err != nil) != tt.expectedErr {
 				t.Errorf("SaveConfig() error = %v, expectedErr %v", err, tt.expectedErr)
 				return
 			}
 			if err == nil {
-				loadedConfig, loadErr := LoadConfig[ServerConfig](tt.filePath)
+				loadedConfig, loadErr := common.LoadConfig[common.ServerConfig](tt.filePath)
 				if loadErr != nil {
 					t.Errorf("Failed to load saved config: %v", loadErr)
 					return
@@ -134,28 +136,28 @@ func TestSaveConfig(t *testing.T) {
 }
 
 func TestConvertToAgentCard(t *testing.T) {
-	skill := SkillConfig{ID: "skill1", Name: "Skill 1", Description: "Test skill"}
-	provider := ProviderConfig{Name: "Provider 1", URI: "http://provider.com"}
-	capabilities := CapabilitiesConfig{SupportsStreaming: true, SupportsSessions: false, SupportsPushNotification: true}
+	skill := common.SkillConfig{ID: "skill1", Name: "Skill 1", Description: "Test skill"}
+	provider := common.ProviderConfig{Name: "Provider 1", URI: "http://provider.com"}
+	capabilities := common.CapabilitiesConfig{SupportsStreaming: true, SupportsSessions: false, SupportsPushNotification: true}
 
-	authConfig := AuthConfig{Type: "test", Scheme: "testScheme", Configuration: map[string]interface{}{"key": "value"}}
-	testCard := AgentCardConfig{
+	authConfig := common.AuthConfig{Type: "test", Scheme: "testScheme", Configuration: map[string]interface{}{"key": "value"}}
+	testCard := common.AgentCardConfig{
 		A2AVersion:       "1.0",
 		ID:               "test-agent",
 		Name:             "Test Agent",
 		Description:      "This is a test agent.",
 		IconURI:          "http://test.com/icon.png",
 		Provider:         &provider,
-		Skills:           []SkillConfig{skill},
+		Skills:           []common.SkillConfig{skill},
 		Capabilities:     &capabilities,
-		Authentication:   []AuthConfig{authConfig},
+		Authentication:   []common.AuthConfig{authConfig},
 		ContactEmail:     "test@test.com",
 		LegalInfoURI:     "http://test.com/legal",
 		HomepageURI:      "http://test.com/home",
 		DocumentationURI: "http://test.com/docs",
 	}
 
-	a2aCard := ConvertToAgentCard(testCard)
+	a2aCard := common.ConvertToAgentCard(&testCard)
 
 	if a2aCard.A2AVersion != testCard.A2AVersion {
 		t.Errorf("ConvertToAgentCard() A2AVersion = %v, expected %v", a2aCard.A2AVersion, testCard.A2AVersion)
@@ -216,30 +218,29 @@ func TestConvertToAgentCard(t *testing.T) {
 			t.Errorf("ConvertToAgentCard() Authentication Configuration = %v, expected %v", a2aCard.Authentication[i].Configuration, auth.Configuration)
 		}
 	}
-
 }
 
 func TestDefaultServerConfig(t *testing.T) {
-	config := DefaultServerConfig()
+	config := common.DefaultServerConfig()
 
-	expectedConfig := ServerConfig{
+	expectedConfig := common.ServerConfig{
 		ListenAddress: ":8080",
 		AgentCardPath: "/.well-known/agent.json",
 		A2APathPrefix: "/a2a",
 		LogLevel:      "info",
-		AgentCard: AgentCardConfig{
+		AgentCard: common.AgentCardConfig{
 			A2AVersion:  "1.0",
 			ID:          "go-a2a-server",
 			Name:        "Go A2A Server",
 			Description: "A standalone A2A server implemented in Go",
-			Skills: []SkillConfig{
+			Skills: []common.SkillConfig{
 				{
 					ID:          "echo",
 					Name:        "Echo",
 					Description: "Echoes back the input message",
 				},
 			},
-			Capabilities: &CapabilitiesConfig{
+			Capabilities: &common.CapabilitiesConfig{
 				SupportsStreaming:        true,
 				SupportsSessions:         true,
 				SupportsPushNotification: true,
@@ -293,13 +294,12 @@ func TestDefaultServerConfig(t *testing.T) {
 	if config.AgentCard.Capabilities.SupportsPushNotification != expectedConfig.AgentCard.Capabilities.SupportsPushNotification {
 		t.Errorf("DefaultServerConfig() AgentCard.Capabilities.SupportsPushNotification = %v, expected %v", config.AgentCard.Capabilities.SupportsPushNotification, expectedConfig.AgentCard.Capabilities.SupportsPushNotification)
 	}
-
 }
 
 func TestDefaultClientConfig(t *testing.T) {
-	config := DefaultClientConfig()
+	config := common.DefaultClientConfig()
 
-	expectedConfig := ClientConfig{
+	expectedConfig := common.ClientConfig{
 		DefaultAgentURL: "http://localhost:8080",
 		OutputFormat:    "pretty",
 	}
@@ -313,9 +313,9 @@ func TestDefaultClientConfig(t *testing.T) {
 }
 
 func TestDefaultLLMConfig(t *testing.T) {
-	config := DefaultLLMConfig()
+	config := common.DefaultLLMConfig()
 
-	expectedConfig := LLMConfig{
+	expectedConfig := common.LLMConfig{
 		Provider:     "openai",
 		Model:        "",
 		APIKey:       "",

@@ -1,4 +1,3 @@
-// Package task provides shared types and interfaces for the A2A task handling system.
 package task
 
 import (
@@ -7,34 +6,32 @@ import (
 	"github.com/sammcj/go-a2a/a2a"
 )
 
-// Context contains the context for a task to be processed.
+// Context represents the context for a task execution.
 type Context struct {
-	TaskID      string      // The ID of the task
-	UserMessage a2a.Message // The user's message
+	TaskID      string
+	UserMessage a2a.Message
 }
 
-// YieldUpdate represents an update to a task being processed.
+// YieldUpdate represents an update from a task execution.
 type YieldUpdate interface {
-	isTaskYieldUpdate()
+	isYieldUpdate()
 }
 
-// StatusUpdate represents a status update for a task.
+// StatusUpdate represents a status update from a task.
 type StatusUpdate struct {
-	State   a2a.TaskState // The new state of the task
-	Message *a2a.Message  // An optional message to include with the update
+	State   a2a.TaskState
+	Message *a2a.Message
 }
 
-// Ensure StatusUpdate implements YieldUpdate.
-func (s StatusUpdate) isTaskYieldUpdate() {}
+func (StatusUpdate) isYieldUpdate() {}
 
-// ArtifactUpdate represents an artifact being added to a task.
+// ArtifactUpdate represents an artifact update from a task.
 type ArtifactUpdate struct {
-	Part     a2a.Part               // The artifact part
-	Metadata map[string]interface{} // Optional metadata for the artifact
+	Part     a2a.Part
+	Metadata interface{}
 }
 
-// Ensure ArtifactUpdate implements YieldUpdate.
-func (a ArtifactUpdate) isTaskYieldUpdate() {}
+func (ArtifactUpdate) isYieldUpdate() {}
 
-// Handler is a function that processes a task and returns a channel for updates.
-type Handler func(ctx context.Context, taskCtx Context) (<-chan YieldUpdate, error)
+// Handler is a function type that processes a task and returns a channel of updates.
+type Handler func(context.Context, Context) (<-chan YieldUpdate, error)

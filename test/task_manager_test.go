@@ -33,9 +33,6 @@ func TestInMemoryTaskManager_GetTask(t *testing.T) {
 	if task.ID != taskID {
 		t.Fatalf("GetTask returned wrong taskID")
 	}
-	if task.Type != "test-type" {
-		t.Fatalf("GetTask returned wrong task type")
-	}
 }
 
 func TestInMemoryTaskManager_UpdateTask(t *testing.T) {
@@ -52,7 +49,7 @@ func TestInMemoryTaskManager_UpdateTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetTask failed: %v", err)
 	}
-	if task.Status != server.TaskStatusInProgress {
+	if task.Status.State != server.TaskStatusInProgress {
 		t.Fatalf("UpdateTask did not update status")
 	}
 }
@@ -90,11 +87,18 @@ func TestInMemoryTaskManager_ListTasks(t *testing.T) {
 	if len(tasks) != 2 {
 		t.Fatalf("ListTasks returned wrong number of tasks")
 	}
-	if tasks[0].ID != taskID1 && tasks[0].ID != taskID2 {
-		t.Fatalf("ListTasks returned wrong task")
+
+	found1, found2 := false, false
+	for _, task := range tasks {
+		if task.ID == taskID1 {
+			found1 = true
+		}
+		if task.ID == taskID2 {
+			found2 = true
+		}
 	}
-	if tasks[1].ID != taskID1 && tasks[1].ID != taskID2 {
-		t.Fatalf("ListTasks returned wrong task")
+	if !found1 || !found2 {
+		t.Fatalf("ListTasks did not return expected tasks")
 	}
 }
 

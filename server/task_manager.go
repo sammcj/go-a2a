@@ -42,8 +42,103 @@ type InMemoryTaskManager struct {
 	pushConfigs  map[string]*a2a.PushNotificationConfig // Map of task ID to push notification config
 	taskHandler  task.Handler                           // Application-specific task handler
 	pushNotifier *PushNotifier                          // Push notification sender
+	expiry       time.Duration                          // Task expiry duration
 	mu           sync.RWMutex                           // Mutex for thread safety
-	// TODO: Add fields for SSE connections, active tasks, etc.
+}
+
+// CreateTask creates a new task and returns its ID.
+func (tm *InMemoryTaskManager) CreateTask(ctx context.Context, taskType string, params interface{}) (string, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	id := generateTaskID()
+	now := time.Now()
+
+	task := &a2a.Task{
+		ID: id,
+		Status: a2a.TaskStatus{
+			State:     a2a.TaskStateSubmitted,
+			Timestamp: now,
+		},
+		History:   []a2a.Message{},
+		Artifacts: []a2a.Artifact{},
+	}
+
+	tm.tasks[id] = task
+	return id, nil
+}
+
+// GetTask retrieves a task by ID.
+func (tm *InMemoryTaskManager) GetTask(ctx context.Context, id string) (*a2a.Task, error) {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
+	task, exists := tm.tasks[id]
+	if !exists {
+		return nil, fmt.Errorf("task not found: %s", id)
+	}
+
+	return task, nil
+}
+
+// UpdateTask updates a task's status.
+func (tm *InMemoryTaskManager) UpdateTask(ctx context.Context, id string, status a2a.TaskState, message *a2a.Message, err error) error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	task, exists := tm.tasks[id]
+	if !exists {
+		return fmt.Errorf("task not found: %s", id)
+	}
+
+	task.Status = a2a.TaskStatus{
+		State:     status,
+		Timestamp: time.Now(),
+		Message:   message,
+	}
+
+	if message != nil {
+		var msg a2a.Message = *message
+		task.History = append(task.History, msg)
+	}
+
+	return nil
+}
+
+// DeleteTask deletes a task.
+func (tm *InMemoryTaskManager) DeleteTask(ctx context.Context, id string) error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if _, exists := tm.tasks[id]; !exists {
+		return fmt.Errorf("task not found: %s", id)
+	}
+
+	delete(tm.tasks, id)
+	return nil
+}
+
+// ListTasks returns all tasks.
+func (tm *InMemoryTaskManager) ListTasks(ctx context.Context) ([]*a2a.Task, error) {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
+	tasks := make([]*a2a.Task, 0, len(tm.tasks))
+	for _, task := range tm.tasks {
+		// Check if task is expired
+		if !time.Now().After(task.Status.Timestamp.Add(tm.expiry)) {
+			tasks = append(tasks, task)
+		}
+	}
+
+	return tasks, nil
+}
+
+// SetTaskExpiry sets the expiry duration for tasks.
+func (tm *InMemoryTaskManager) SetTaskExpiry(duration time.Duration) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.expiry = duration
 }
 
 // NewInMemoryTaskManager creates a new InMemoryTaskManager.
