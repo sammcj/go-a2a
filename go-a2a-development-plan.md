@@ -6,24 +6,24 @@
 
 **Design Principles:**
 
-*   **Clean & Idiomatic Go:** Follow standard Go practices and conventions.
-*   **Efficient:** Optimise for performance where appropriate, especially in transport and concurrency.
-*   **Easy to Maintain:** Modular design, clear separation of concerns, good documentation and testing.
-*   **Extensible:** Use interfaces and patterns that allow users to customise behaviour (e.g., task storage, authentication).
-*   **Lightweight:** Minimise external dependencies.
-*   **Practical:** Focus on usability for developers building A2A agents or clients.
-*   **Specification Compliant:** Adhere strictly to the A2A JSON specification.
+* **Clean & Idiomatic Go:** Follow standard Go practices and conventions.
+* **Efficient:** Optimise for performance where appropriate, especially in transport and concurrency.
+* **Easy to Maintain:** Modular design, clear separation of concerns, good documentation and testing.
+* **Extensible:** Use interfaces and patterns that allow users to customise behaviour (e.g., task storage, authentication).
+* **Lightweight:** Minimise external dependencies.
+* **Practical:** Focus on usability for developers building A2A agents or clients.
+* **Specification Compliant:** Adhere strictly to the A2A JSON specification.
 
 ## 2. Core Concepts Mapping
 
-*   **A2A Server/Client:** Implemented as distinct components within the `go-a2a` library. The server will handle incoming HTTP/SSE requests, and the client will make outgoing requests.
-*   **Agent Card:** A Go struct (`a2a.AgentCard`) representing the card. The server will have functionality to define and serve this (e.g., via a configurable HTTP handler for `/.well-known/agent.json`). The client will have helpers to fetch and parse it.
-*   **A2A Methods (`tasks/send`, etc.):** These will be mapped to specific handler functions on the server and dedicated methods on the client struct. JSON-RPC 2.0 request/response formats will be strictly followed.
-*   **A2A Objects (Task, Artifact, Message, Part):** Defined as Go structs (`a2a.Task`, `a2a.Artifact`, etc.) in a core types package, with appropriate `json` tags for marshalling/unmarshalling.
-*   **Skills:** Represented within the `AgentCard` struct. The server logic will route requests based on the implicit or explicit skill targeted by the client's task message. Skill implementation logic resides within the server's task handlers.
-*   **Transport (HTTP/SSE):** The server will use Go's standard `net/http` library to handle JSON-RPC requests. SSE support for `tasks/sendSubscribe` and `tasks/resubscribe` will require dedicated SSE handling logic, potentially inspired by `mcp-go`'s approach but adapted for A2A's specific event types (`TaskStatusUpdateEvent`, `TaskArtifactUpdateEvent`).
-*   **Authentication:** Handled primarily at the HTTP layer using middleware. The library will provide hooks or interfaces to integrate custom authentication logic based on schemes declared in the `AgentCard`.
-*   **Push Notifications:** The server will need logic to store `PushNotificationConfig` per task and make outbound HTTP requests to the configured notification URL when required.
+* **A2A Server/Client:** Implemented as distinct components within the `go-a2a` library. The server will handle incoming HTTP/SSE requests, and the client will make outgoing requests.
+* **Agent Card:** A Go struct (`a2a.AgentCard`) representing the card. The server will have functionality to define and serve this (e.g., via a configurable HTTP handler for `/.well-known/agent.json`). The client will have helpers to fetch and parse it.
+* **A2A Methods (`tasks/send`, etc.):** These will be mapped to specific handler functions on the server and dedicated methods on the client struct. JSON-RPC 2.0 request/response formats will be strictly followed.
+* **A2A Objects (Task, Artifact, Message, Part):** Defined as Go structs (`a2a.Task`, `a2a.Artifact`, etc.) in a core types package, with appropriate `json` tags for marshalling/unmarshalling.
+* **Skills:** Represented within the `AgentCard` struct. The server logic will route requests based on the implicit or explicit skill targeted by the client's task message. Skill implementation logic resides within the server's task handlers.
+* **Transport (HTTP/SSE):** The server will use Go's standard `net/http` library to handle JSON-RPC requests. SSE support for `tasks/sendSubscribe` and `tasks/resubscribe` will require dedicated SSE handling logic, potentially inspired by `mcp-go`'s approach but adapted for A2A's specific event types (`TaskStatusUpdateEvent`, `TaskArtifactUpdateEvent`).
+* **Authentication:** Handled primarily at the HTTP layer using middleware. The library will provide hooks or interfaces to integrate custom authentication logic based on schemes declared in the `AgentCard`.
+* **Push Notifications:** The server will need logic to store `PushNotificationConfig` per task and make outbound HTTP requests to the configured notification URL when required.
 
 ## 3. Proposed Package Structure
 
@@ -53,23 +53,23 @@ go-a2a/
 
 Located primarily in `a2a.go`. Key structs will include:
 
-*   `AgentCard`, `AgentProvider`, `AgentSkill`, `AgentCapabilities`, `AgentAuthentication`
-*   `Task`, `TaskStatus`, `TaskState` (enum/const)
-*   `Artifact`
-*   `Message`, `Role` (enum/const)
-*   `Part` (interface or tagged union), `TextPart`, `FilePart`, `DataPart`, `FileContent`
-*   `PushNotificationConfig`, `AuthenticationInfo`
-*   Structs for each JSON-RPC request parameter (`TaskSendParams`, `TaskQueryParams`, etc.)
-*   Structs for JSON-RPC request/response envelopes (`JSONRPCRequest`, `JSONRPCResponse`, specific method request/response types like `SendTaskRequest`, `SendTaskResponse`).
-*   Structs for SSE events (`TaskStatusUpdateEvent`, `TaskArtifactUpdateEvent`).
+* `AgentCard`, `AgentProvider`, `AgentSkill`, `AgentCapabilities`, `AgentAuthentication`
+* `Task`, `TaskStatus`, `TaskState` (enum/const)
+* `Artifact`
+* `Message`, `Role` (enum/const)
+* `Part` (interface or tagged union), `TextPart`, `FilePart`, `DataPart`, `FileContent`
+* `PushNotificationConfig`, `AuthenticationInfo`
+* Structs for each JSON-RPC request parameter (`TaskSendParams`, `TaskQueryParams`, etc.)
+* Structs for JSON-RPC request/response envelopes (`JSONRPCRequest`, `JSONRPCResponse`, specific method request/response types like `SendTaskRequest`, `SendTaskResponse`).
+* Structs for SSE events (`TaskStatusUpdateEvent`, `TaskArtifactUpdateEvent`).
 
 All structs will have `json:"..."` tags matching the A2A specification precisely.
 
 ## 5. Server Implementation (`server/`)
 
-*   **Transport:** Use `net/http` to create an HTTP server. A central handler will parse incoming requests, identify the JSON-RPC method, and route to specific method handlers.
-*   **JSON-RPC Handling & Delegation:** The server's central HTTP handler will decode incoming JSON-RPC requests, perform basic validation (JSON structure, method name), and then delegate the request to the corresponding method on the configured `TaskManager` interface (e.g., `taskManager.OnGetTask(ctx, params)`). The server is responsible for encoding the `TaskManager`'s response (or error) back into the appropriate JSON-RPC format (standard JSON or SSE).
-*   **Task Management (`TaskManager` Interface):** This interface becomes the core logic hub. It should define methods for each A2A operation:
+* **Transport:** Use `net/http` to create an HTTP server. A central handler will parse incoming requests, identify the JSON-RPC method, and route to specific method handlers.
+* **JSON-RPC Handling & Delegation:** The server's central HTTP handler will decode incoming JSON-RPC requests, perform basic validation (JSON structure, method name), and then delegate the request to the corresponding method on the configured `TaskManager` interface (e.g., `taskManager.OnGetTask(ctx, params)`). The server is responsible for encoding the `TaskManager`'s response (or error) back into the appropriate JSON-RPC format (standard JSON or SSE).
+* **Task Management (`TaskManager` Interface):** This interface becomes the core logic hub. It should define methods for each A2A operation:
     ```go
     type TaskManager interface {
         // Handles non-streaming task send/resume.
@@ -96,9 +96,9 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
         // (Potentially other internal methods for state management)
     }
     ```
-    *   The *implementation* of this interface (e.g., `InMemoryTaskManager`) will contain the detailed logic for managing task state, history, artifacts, invoking the application-specific `TaskHandler` function for `OnSendTask`/`OnSendTaskSubscribe`, managing SSE channels, and handling persistence.
-*   **Application Logic (`TaskHandler` Function):** The application developer provides a function matching the `TaskHandler` signature, which is used by the `TaskManager` implementation to execute the core agent/tool logic.
-    *   **Refined Go Types (within `server` package):**
+  * The *implementation* of this interface (e.g., `InMemoryTaskManager`) will contain the detailed logic for managing task state, history, artifacts, invoking the application-specific `TaskHandler` function for `OnSendTask`/`OnSendTaskSubscribe`, managing SSE channels, and handling persistence.
+* **Application Logic (`TaskHandler` Function):** The application developer provides a function matching the `TaskHandler` signature, which is used by the `TaskManager` implementation to execute the core agent/tool logic.
+  * **Refined Go Types (within `server` package):**
         ```go
         // TaskContext provides context to the TaskHandler.
         type TaskContext struct {
@@ -131,31 +131,31 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
         // Closing the channel indicates completion.
         type TaskHandler func(ctx context.Context, taskContext TaskContext) (<-chan TaskYieldUpdate, error)
         ```
-*   **Task Management (`TaskManager` Implementation):**
-    *   The default `InMemoryTaskManager` implementation will manage task state (maps, mutexes), history, artifacts, and persistence.
-    *   It will invoke the user-provided `TaskHandler` when processing `OnSendTask` or `OnSendTaskSubscribe`.
-    *   Provide a default in-memory implementation using maps and mutexes/channels for concurrency control.
-    *   Manage task state transitions (`submitted` -> `working` -> `input-required` -> `completed`/`failed`/`canceled`).
-    *   Store task history and artifacts.
-    *   Handle task persistence (initially in-memory, extensible via the interface).
-*   **SSE Handling (A2A):**
-    *   Specific endpoint (e.g., `/a2a/sse`) for `tasks/sendSubscribe` and `tasks/resubscribe`. Requires distinct logic from any potential MCP SSE handling.
-    *   Manage active A2A SSE connections per task ID.
-    *   Push A2A-specific `TaskStatusUpdateEvent` and `TaskArtifactUpdateEvent` to connected clients when task state or artifacts change. Use Go channels for communication between task management logic and SSE writers.
-*   **Agent Card Serving:** A configurable HTTP handler (defaulting to `/.well-known/agent.json`) that serves the server's configured `AgentCard` as JSON.
-*   **Authentication:** Implement HTTP middleware that checks request headers (e.g., `Authorization`) against the schemes defined in the `AgentCard`. Provide hooks/interfaces for integrating specific auth logic (e.g., validating OAuth tokens).
-*   **Push Notifications:** When a task updates and has a `PushNotificationConfig`, the `TaskManager` should trigger an asynchronous function to make an authenticated POST request to the configured `url` with the task update details.
-*   **Configuration:** Use a builder pattern or functional options (`server.Option`) for configuring the server (Agent Card details, address, task manager implementation, auth middleware, etc.).
+* **Task Management (`TaskManager` Implementation):**
+  * The default `InMemoryTaskManager` implementation will manage task state (maps, mutexes), history, artifacts, and persistence.
+  * It will invoke the user-provided `TaskHandler` when processing `OnSendTask` or `OnSendTaskSubscribe`.
+  * Provide a default in-memory implementation using maps and mutexes/channels for concurrency control.
+  * Manage task state transitions (`submitted` -> `working` -> `input-required` -> `completed`/`failed`/`canceled`).
+  * Store task history and artifacts.
+  * Handle task persistence (initially in-memory, extensible via the interface).
+* **SSE Handling (A2A):**
+  * Specific endpoint (e.g., `/a2a/sse`) for `tasks/sendSubscribe` and `tasks/resubscribe`. Requires distinct logic from any potential MCP SSE handling.
+  * Manage active A2A SSE connections per task ID.
+  * Push A2A-specific `TaskStatusUpdateEvent` and `TaskArtifactUpdateEvent` to connected clients when task state or artifacts change. Use Go channels for communication between task management logic and SSE writers.
+* **Agent Card Serving:** A configurable HTTP handler (defaulting to `/.well-known/agent.json`) that serves the server's configured `AgentCard` as JSON.
+* **Authentication:** Implement HTTP middleware that checks request headers (e.g., `Authorization`) against the schemes defined in the `AgentCard`. Provide hooks/interfaces for integrating specific auth logic (e.g., validating OAuth tokens).
+* **Push Notifications:** When a task updates and has a `PushNotificationConfig`, the `TaskManager` should trigger an asynchronous function to make an authenticated POST request to the configured `url` with the task update details.
+* **Configuration:** Use a builder pattern or functional options (`server.Option`) for configuring the server (Agent Card details, address, task manager implementation, auth middleware, etc.).
 
 ## 6. Client Implementation (`client/`)
 
-*   **Client Struct:** Holds the target agent's base URL, HTTP client, and potentially parsed `AgentCard`.
-*   **Core Methods:** Functions like `SendTask`, `GetTask`, `CancelTask`, `SetPushNotification`, `GetPushNotification`, `SendSubscribe`, `Resubscribe`.
-*   **HTTP Interaction:** Use Go's `net/http` client to make requests. Handle marshalling Go structs into JSON-RPC request bodies and unmarshalling responses.
-*   **SSE Handling (A2A):** The `SendSubscribe` and `Resubscribe` methods will establish an SSE connection to an A2A server and return channels for receiving A2A-specific `TaskStatusUpdateEvent` and `TaskArtifactUpdateEvent` objects, along with an error channel.
-*   **Agent Card:** Method to fetch and parse the `AgentCard` from the server's well-known endpoint.
-*   **Authentication:** Provide ways to configure authentication credentials (e.g., tokens) that the client will automatically add to outgoing request headers.
-*   **Configuration:** Functional options (`client.Option`) for configuration (base URL, HTTP client, timeout, auth credentials).
+* **Client Struct:** Holds the target agent's base URL, HTTP client, and potentially parsed `AgentCard`.
+* **Core Methods:** Functions like `SendTask`, `GetTask`, `CancelTask`, `SetPushNotification`, `GetPushNotification`, `SendSubscribe`, `Resubscribe`.
+* **HTTP Interaction:** Use Go's `net/http` client to make requests. Handle marshalling Go structs into JSON-RPC request bodies and unmarshalling responses.
+* **SSE Handling (A2A):** The `SendSubscribe` and `Resubscribe` methods will establish an SSE connection to an A2A server and return channels for receiving A2A-specific `TaskStatusUpdateEvent` and `TaskArtifactUpdateEvent` objects, along with an error channel.
+* **Agent Card:** Method to fetch and parse the `AgentCard` from the server's well-known endpoint.
+* **Authentication:** Provide ways to configure authentication credentials (e.g., tokens) that the client will automatically add to outgoing request headers.
+* **Configuration:** Functional options (`client.Option`) for configuration (base URL, HTTP client, timeout, auth credentials).
 
 ## 7. LLM Integration Architecture
 
@@ -163,9 +163,9 @@ To provide an all-in-one solution while maintaining flexibility and loose coupli
 
 ### Core Components
 
-*   **LLM Interface:** A Go interface that defines standard methods for interacting with LLMs, such as generating text and streaming responses.
-*   **Agent Engine:** A Go interface that defines how an agent processes tasks, potentially using LLMs.
-*   **gollm Adapter:** The primary implementation of the LLM interface using the [gollm](https://github.com/teilomillet/gollm) library, which provides a unified API for interacting with various LLM providers.
+* **LLM Interface:** A Go interface that defines standard methods for interacting with LLMs, such as generating text and streaming responses.
+* **Agent Engine:** A Go interface that defines how an agent processes tasks, potentially using LLMs.
+* **gollm Adapter:** The primary implementation of the LLM interface using the [gollm](https://github.com/teilomillet/gollm) library, which provides a unified API for interacting with various LLM providers.
 
 ### Package Structure
 
@@ -249,141 +249,140 @@ This architecture provides an all-in-one solution while maintaining flexibility 
 
 ## 8. Integration with `mcp-go`
 
-*   **Primary Integration:** An A2A agent (built with `go-a2a`) acting as an MCP client. The A2A task handling logic within the `go-a2a` server can instantiate and use an MCP client (potentially using `mcp-go` if it offers client capabilities, or another library) to call tools or read resources from MCP servers as part of fulfilling an A2A task. `go-a2a` itself will *not* depend directly on `mcp-go`.
-*   **Secondary (Future):** An application could potentially run both an `mcp-go` server and a `go-a2a` server in the same process, sharing underlying logic. An A2A `tasks/send` could potentially be mapped to trigger an `mcp-go` tool call internally. This is more complex and considered a future enhancement.
+* **Primary Integration:** An A2A agent (built with `go-a2a`) acting as an MCP client. The A2A task handling logic within the `go-a2a` server can instantiate and use an MCP client (potentially using `mcp-go` if it offers client capabilities, or another library) to call tools or read resources from MCP servers as part of fulfilling an A2A task. `go-a2a` itself will *not* depend directly on `mcp-go`.
+* **Secondary (Future):** An application could potentially run both an `mcp-go` server and a `go-a2a` server in the same process, sharing underlying logic. An A2A `tasks/send` could potentially be mapped to trigger an `mcp-go` tool call internally. This is more complex and considered a future enhancement.
 
 ## 9. Key Considerations
 
-*   **Error Handling:** Define Go error types that map clearly to the standard A2A JSON-RPC error codes (`TaskNotFound`, `InvalidParams`, etc.). Ensure handlers return these errors appropriately.
-*   **Concurrency:** Use goroutines for handling concurrent requests, SSE streams, and background task processing. Ensure thread safety in shared components like the `TaskManager` (e.g., using `sync.Mutex` or channels).
-*   **State Management:** Robustly handle task state transitions and persistence (even if initially in-memory).
-*   **Testing:** Implement comprehensive unit tests for core types, handlers, client methods, and task management. Include integration tests simulating client-server interactions over HTTP and SSE.
-*   **Extensibility:** Design with interfaces (`TaskManager`, potentially auth handlers) to allow users to swap out default implementations.
-*   **Dependencies:** Rely primarily on the Go standard library (`net/http`, `encoding/json`, `sync`, `context`). Avoid unnecessary third-party dependencies.
-*   **Concurrent SSE:** An application needs to manage concurrent SSE connections acting as an A2A client, A2A server, and potentially MCP clients/servers simultaneously. The library must handle these distinct protocol streams (A2A vs. MCP) and connection lifecycles correctly, potentially requiring separate endpoints and handlers if serving both protocols.
-*   **Discovery Mechanisms:** Acknowledge the different discovery approaches. A2A uses pre-interaction discovery via fetching the `AgentCard` (typically from `/.well-known/agent.json`), which `go-a2a` must support (serving and fetching). MCP uses post-connection discovery via the `initialize` handshake, which is handled by the MCP client library (e.g., `mcp-go`) used *within* the A2A application, not directly by `go-a2a`.
+* **Error Handling:** Define Go error types that map clearly to the standard A2A JSON-RPC error codes (`TaskNotFound`, `InvalidParams`, etc.). Ensure handlers return these errors appropriately.
+* **Concurrency:** Use goroutines for handling concurrent requests, SSE streams, and background task processing. Ensure thread safety in shared components like the `TaskManager` (e.g., using `sync.Mutex` or channels).
+* **State Management:** Robustly handle task state transitions and persistence (even if initially in-memory).
+* **Testing:** Implement comprehensive unit tests for core types, handlers, client methods, and task management. Include integration tests simulating client-server interactions over HTTP and SSE.
+* **Extensibility:** Design with interfaces (`TaskManager`, potentially auth handlers) to allow users to swap out default implementations.
+* **Dependencies:** Rely primarily on the Go standard library (`net/http`, `encoding/json`, `sync`, `context`). Avoid unnecessary third-party dependencies.
+* **Concurrent SSE:** An application needs to manage concurrent SSE connections acting as an A2A client, A2A server, and potentially MCP clients/servers simultaneously. The library must handle these distinct protocol streams (A2A vs. MCP) and connection lifecycles correctly, potentially requiring separate endpoints and handlers if serving both protocols.
+* **Discovery Mechanisms:** Acknowledge the different discovery approaches. A2A uses pre-interaction discovery via fetching the `AgentCard` (typically from `/.well-known/agent.json`), which `go-a2a` must support (serving and fetching). MCP uses post-connection discovery via the `initialize` handshake, which is handled by the MCP client library (e.g., `mcp-go`) used *within* the A2A application, not directly by `go-a2a`.
 
 ## 10. Roadmap / Next Steps
 
-1.  **Phase 1: Core Types & Basic Client/Server:** ✅ COMPLETED
-    *   ✅ Define all core Go structs (`a2a.go`).
-    *   ✅ Define A2A specific error types (`errors.go`).
-    *   ✅ Implement basic HTTP server with JSON-RPC request/response handling (`server/server.go`, `server/handler.go`).
-    *   ✅ Implement in-memory `TaskManager` (`server/task_manager.go`).
-    *   ✅ Implement Agent Card serving (`server/agent_card.go`).
-    *   ✅ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth (`client/client.go`, `client/options.go`).
-    *   ✅ Basic unit tests.
-2.  **Phase 2: SSE Implementation:** ✅ COMPLETED
-    *   ✅ Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
-    *   ✅ Add client-side SSE handling.
-    *   ✅ Integrate SSE with `TaskManager` updates.
-    *   ✅ SSE-specific tests.
-3.  **Phase 3: Authentication & Push Notifications:** ✅ COMPLETED
-    *   ✅ Implement server-side auth middleware hooks/interfaces (`server/middleware/auth.go`).
-    *   ✅ Implement client-side auth configuration (`client/options.go`).
-    *   ✅ Implement server logic for sending push notifications (`server/push_notification.go`).
-    *   ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
-    *   ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
-    *   ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
-4.  **Phase 4: LLM Integration:** ✅ COMPLETED
-    *   ✅ Define LLM interface (`llm/interface.go`).
-    *   ✅ Implement gollm adapter (`llm/gollm/adapter.go`, `llm/gollm/options.go`).
-    *   ✅ Define Agent Engine interface (`server/agent_engine.go`).
-    *   ✅ Implement BasicLLMAgent.
-    *   ✅ Implement ToolAugmentedAgent.
-    *   ✅ Add server configuration options for LLM-powered agents.
-    *   ✅ Create examples demonstrating LLM integration (`examples/llm_integration_example.go`).
-    *   ✅ Implement MCP integration for tool handling (`server/mcp_client.go`).
-    *   ✅ Create examples demonstrating MCP integration (`examples/mcp_integration_example.go`).
-    *   ✅ Add support for more LLM providers through the gollm adapter.
-5.  **Phase 5: Standalone Client & Server Applications:** ✅ COMPLETED
-    *   **Server Application (`cmd/a2a-server`):**
-        *   ✅ Create command-line interface with flags for configuration:
-            *   ✅ Listen address and port
-            *   ✅ Agent card file path
-            *   ✅ Authentication settings
-            *   ✅ Task handler plugin path
-        *   ✅ Implement configuration file support (YAML/JSON):
-            *   ✅ Server settings
-            *   ✅ Agent card configuration
-            *   ✅ Authentication settings
-        *   ✅ Develop plugin system for task handlers:
-            *   ✅ Define plugin interface
-            *   ✅ Implement dynamic loading of plugins
-            *   ✅ Create sample plugins (echo, file processor, etc.)
-        *   ✅ Add logging:
-            *   ✅ Configurable log levels
-            *   ✅ Optional Request/response logging
-            *   ✅ Optional Task execution logging
-        *   ✅ Add graceful shutdown handling
-        *   ✅ Create Dockerfile and docker-compose
-        *   ⬜ Implement monitoring endpoints:
-            *   ⬜ Health check endpoint
-            *   ⬜ Basic Metrics endpoint (Prometheus compatible)
-            *   ⬜ Basic Task status dashboard (but don't implement a full JS/TS web UI as a standalone app)
-    *   **Client Application (`cmd/a2a-client`):**
-        *   ✅ Create command-line interface with subcommands:
-            *   ✅ `send` - Send a task to an agent
-            *   ✅ `get` - Get task status
-            *   ✅ `cancel` - Cancel a task
-            *   ✅ `subscribe` - Subscribe to task updates
-            *   ✅ `push` - Configure push notifications
-            *   ✅ `card` - Get agent card information
-        *   ✅ Add configuration file support:
-            *   ✅ Default agent URLs
-            *   ✅ Authentication settings
-            *   ✅ Output formatting preferences
-        *   ⬜ Implement interactive mode:
-            *   ⬜ TUI (Terminal User Interface) for task interaction
-            *   ⬜ History
-            *   ⬜ Live task status updates
-        *   ✅ Implement various output formats:
-            *   ✅ JSON
-            *   ✅ Pretty-printed
-    *   **Common Infrastructure:**
-        *   ✅ Shared configuration handling
-        *   ✅ Authentication utilities
-        *   ✅ Error handling and reporting
-        *   ✅ Documentation and examples
-        *   ✅ Installation scripts and packages (Makefile)
-6.  **Phase 6: Refinement & Documentation:** 🔄 IN PROGRESS
-    *   ✅ Create comprehensive README with architecture overview and usage examples.
-    *   ⬜ Write detailed package documentation (godoc).
-    *   ⬜ Refine APIs based on usage feedback.
-    *   ⬜ Improve test coverage.
-    *   ⬜ Add helper utilities (e.g., validating `AgentCard`s).
-    *   ⬜ Create Github Actions CI/CD pipeline for testing and releases with semver versioning.
+1. **Phase 1: Core Types & Basic Client/Server:** ✅ COMPLETED
+    * ✅ Define all core Go structs (`a2a.go`).
+    * ✅ Define A2A specific error types (`errors.go`).
+    * ✅ Implement basic HTTP server with JSON-RPC request/response handling (`server/server.go`, `server/handler.go`).
+    * ✅ Implement in-memory `TaskManager` (`server/task_manager.go`).
+    * ✅ Implement Agent Card serving (`server/agent_card.go`).
+    * ✅ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth (`client/client.go`, `client/options.go`).
+    * ✅ Basic unit tests.
+2. **Phase 2: SSE Implementation:** ✅ COMPLETED
+    * ✅ Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
+    * ✅ Add client-side SSE handling.
+    * ✅ Integrate SSE with `TaskManager` updates.
+    * ✅ SSE-specific tests.
+3. **Phase 3: Authentication & Push Notifications:** ✅ COMPLETED
+    * ✅ Implement server-side auth middleware hooks/interfaces (`server/middleware/auth.go`).
+    * ✅ Implement client-side auth configuration (`client/options.go`).
+    * ✅ Implement server logic for sending push notifications (`server/push_notification.go`).
+    * ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
+    * ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
+    * ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
+4. **Phase 4: LLM Integration:** ✅ COMPLETED
+    * ✅ Define LLM interface (`llm/interface.go`).
+    * ✅ Implement gollm adapter (`llm/gollm/adapter.go`, `llm/gollm/options.go`).
+    * ✅ Define Agent Engine interface (`server/agent_engine.go`).
+    * ✅ Implement BasicLLMAgent.
+    * ✅ Implement ToolAugmentedAgent.
+    * ✅ Add server configuration options for LLM-powered agents.
+    * ✅ Create examples demonstrating LLM integration (`examples/llm_integration_example.go`).
+    * ✅ Implement MCP integration for tool handling (`server/mcp_client.go`).
+    * ✅ Create examples demonstrating MCP integration (`examples/mcp_integration_example.go`).
+    * ✅ Add support for more LLM providers through the gollm adapter.
+5. **Phase 5: Standalone Client & Server Applications:** ✅ COMPLETED
+    * **Server Application (`cmd/a2a-server`):**
+        * ✅ Create command-line interface with flags for configuration:
+            * ✅ Listen address and port
+            * ✅ Agent card file path
+            * ✅ Authentication settings
+            * ✅ Task handler plugin path
+        * ✅ Implement configuration file support (YAML/JSON):
+            * ✅ Server settings
+            * ✅ Agent card configuration
+            * ✅ Authentication settings
+        * ✅ Develop plugin system for task handlers:
+            * ✅ Define plugin interface
+            * ✅ Implement dynamic loading of plugins
+            * ✅ Create sample plugins (echo, file processor, etc.)
+        * ✅ Add logging:
+            * ✅ Configurable log levels
+            * ✅ Optional Request/response logging
+            * ✅ Optional Task execution logging
+        * ✅ Add graceful shutdown handling
+        * ✅ Create Dockerfile and docker-compose
+        * ⬜ Implement monitoring endpoints:
+            * ⬜ Health check endpoint
+            * ⬜ Basic Metrics endpoint (Prometheus compatible)
+            * ⬜ Basic Task status dashboard (but don't implement a full JS/TS web UI as a standalone app)
+    * **Client Application (`cmd/a2a-client`):**
+        * ✅ Create command-line interface with subcommands:
+            * ✅ `send` - Send a task to an agent
+            * ✅ `get` - Get task status
+            * ✅ `cancel` - Cancel a task
+            * ✅ `subscribe` - Subscribe to task updates
+            * ✅ `push` - Configure push notifications
+            * ✅ `card` - Get agent card information
+        * ✅ Add configuration file support:
+            * ✅ Default agent URLs
+            * ✅ Authentication settings
+            * ✅ Output formatting preferences
+        * ⬜ Implement interactive mode:
+            * ⬜ TUI (Terminal User Interface) for task interaction
+            * ⬜ History
+            * ⬜ Live task status updates
+        * ✅ Implement various output formats:
+            * ✅ JSON
+            * ✅ Pretty-printed
+    * **Common Infrastructure:**
+        * ✅ Shared configuration handling
+        * ✅ Authentication utilities
+        * ✅ Error handling and reporting
+        * ✅ Documentation and examples
+        * ✅ Installation scripts and packages (Makefile)
+6. **Phase 6: Refinement & Documentation:** 🔄 IN PROGRESS
+    * ✅ Create comprehensive README with architecture overview and usage examples.
+    * ⬜ Enhance the LLM integration with agent templates
+    * ⬜ Simple, local persistent storage option
+    * ⬜ Add helper utilities (e.g., validating `AgentCard`s).
+    * ⬜ Create Github Actions CI/CD pipeline for testing and releases with semver versioning.
 
-7.  **Phase 7: Future Enhancements:** ⬜ PLANNED
-    *   **Server Enhancements:**
-        *   ⬜ Implement monitoring endpoints:
-            *   ⬜ Health check endpoint
-            *   ⬜ Basic Metrics endpoint (Prometheus compatible)
-            *   ⬜ Basic Task status dashboard
-        *   ⬜ Add persistent storage options:
-            *   ⬜ File-based storage
-            *   ⬜ Database storage (SQL, NoSQL)
-        *   ⬜ Implement rate limiting and throttling
-        *   ⬜ Add support for distributed task processing
-        *   ⬜ Implement task history pruning and archiving
-    *   **Client Enhancements:**
-        *   ⬜ Implement interactive mode:
-            *   ⬜ TUI (Terminal User Interface) for task interaction
-            *   ⬜ History
-            *   ⬜ Live task status updates
-        *   ⬜ Add client-side caching
-        *   ⬜ Implement retry logic with backoff
-        *   ⬜ Add support for batch operations
-    *   **LLM Integration Enhancements:**
-        *   ⬜ Add support for more LLM providers
-        *   ⬜ Implement advanced prompt engineering techniques
-        *   ⬜ Add support for function calling
-        *   ⬜ Implement agent memory and context management
-        *   ⬜ Add support for multi-agent collaboration
-    *   **MCP Integration Enhancements:**
-        *   ⬜ Implement bidirectional A2A-MCP bridging
-        *   ⬜ Add support for MCP resource discovery
-        *   ⬜ Implement MCP tool registration
+7. **Phase 7: Future Enhancements:** ⬜ PLANNED
+    * **Server Enhancements:**
+        * ⬜ Implement monitoring endpoints:
+            * ⬜ Health check endpoint
+            * ⬜ Basic Metrics endpoint (Prometheus compatible)
+            * ⬜ Basic Task status dashboard
+        * ⬜ Add persistent storage options:
+            * ⬜ File-based storage
+            * ⬜ Database storage (SQL, NoSQL)
+        * ⬜ Implement rate limiting and throttling
+        * ⬜ Add support for distributed task processing
+        * ⬜ Implement task history pruning and archiving
+    * **Client Enhancements:**
+        * ⬜ Implement interactive mode:
+            * ⬜ TUI (Terminal User Interface) for task interaction
+            * ⬜ History
+            * ⬜ Live task status updates
+        * ⬜ Add client-side caching
+        * ⬜ Implement retry logic with backoff
+        * ⬜ Add support for batch operations
+    * **LLM Integration Enhancements:**
+        * ⬜ Add support for more LLM providers
+        * ⬜ Implement advanced prompt engineering techniques
+        * ⬜ Add support for function calling
+        * ⬜ Implement agent memory and context management
+        * ⬜ Add support for multi-agent collaboration
+    * **MCP Integration Enhancements:**
+        * ⬜ Implement bidirectional A2A-MCP bridging
+        * ⬜ Add support for MCP resource discovery
+        * ⬜ Implement MCP tool registration
 
 ## 11. Example: Web UI Integration (Conceptual)
 
@@ -395,11 +394,11 @@ This section outlines a *conceptual* approach for how a web-based administrative
 
 **Potential API Endpoints (REST Example):**
 
-*   `GET /admin/config`: Returns the server's configuration, potentially including the loaded Agent Card details.
-*   `GET /admin/tasks`: Returns a list of active or recent tasks managed by the `TaskManager`. Could support pagination and filtering (e.g., by status).
-    *   Response might include basic task info: `[{ "id": "...", "sessionId": "...", "status": "working", "startTime": "..." }, ...]`.
-*   `GET /admin/tasks/{taskId}`: Returns detailed information about a specific task, including its current status, history (if stored), and associated artifacts. This endpoint would query the `TaskManager`.
-*   `GET /admin/stats`: Returns operational statistics (e.g., total tasks processed, active SSE connections, error counts).
+* `GET /admin/config`: Returns the server's configuration, potentially including the loaded Agent Card details.
+* `GET /admin/tasks`: Returns a list of active or recent tasks managed by the `TaskManager`. Could support pagination and filtering (e.g., by status).
+  * Response might include basic task info: `[{ "id": "...", "sessionId": "...", "status": "working", "startTime": "..." }, ...]`.
+* `GET /admin/tasks/{taskId}`: Returns detailed information about a specific task, including its current status, history (if stored), and associated artifacts. This endpoint would query the `TaskManager`.
+* `GET /admin/stats`: Returns operational statistics (e.g., total tasks processed, active SSE connections, error counts).
 
 **Web UI Interaction (Pseudo-JavaScript):**
 
@@ -429,8 +428,8 @@ fetchTasks();
 
 **Integration with `go-a2a`:**
 
-*   The application developer would use a web framework (like Go's standard `net/http`, Gin, Echo, etc.) to build this admin API.
-*   The API handlers would interact with the configured `TaskManager` instance (accessible via the interface defined in `go-a2a`) to retrieve task data.
-*   Server configuration details could be read from the same source used to configure the `go-a2a` server instance.
+* The application developer would use a web framework (like Go's standard `net/http`, Gin, Echo, etc.) to build this admin API.
+* The API handlers would interact with the configured `TaskManager` instance (accessible via the interface defined in `go-a2a`) to retrieve task data.
+* Server configuration details could be read from the same source used to configure the `go-a2a` server instance.
 
 This approach keeps the A2A protocol implementation clean and focused, while allowing developers to add standard monitoring and administration capabilities as needed using familiar web technologies. The `go-a2a` library facilitates this by providing access to underlying components like the `TaskManager` via interfaces.
