@@ -1,0 +1,7 @@
+{
+  "defaultAgentUrl": "http://localhost:8080",
+  "outputFormat": "pretty",
+  "authentication": {
+    "Authorization": "Bearer your-token-here"
+  }
+}

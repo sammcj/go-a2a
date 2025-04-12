@@ -1,0 +1,37 @@
+{
+  "listenAddress": ":8080",
+  "agentCardPath": "/.well-known/agent.json",
+  "a2aPathPrefix": "/a2a",
+  "logLevel": "info",
+  "pluginPath": "/app/plugins",
+  "agentCard": {
+    "a2aVersion": "1.0",
+    "id": "go-a2a-server",
+    "name": "Go A2A Server",
+    "description": "A standalone A2A server implemented in Go",
+    "provider": {
+      "name": "Go A2A",
+      "uri": "https://github.com/sammcj/go-a2a"
+    },
+    "skills": [
+      {
+        "id": "echo",
+        "name": "Echo",
+        "description": "Echoes back the input message"
+      },
+      {
+        "id": "file-processor",
+        "name": "File Processor",
+        "description": "Processes files and returns information about them"
+      }
+    ],
+    "capabilities": {
+      "supportsStreaming": true,
+      "supportsSessions": true,
+      "supportsPushNotification": true
+    },
+    "contactEmail": "example@example.com",
+    "homepageUri": "https://github.com/sammcj/go-a2a",
+    "documentationUri": "https://github.com/sammcj/go-a2a/blob/main/README.md"
+  }
+}
