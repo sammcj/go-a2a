@@ -1,3 +1,8 @@
+// Package main provides examples of using the go-a2a library.
+// This file demonstrates LLM integration with the A2A protocol.
+//
+// To avoid conflicts with other examples, you can build this file specifically with:
+// go build -o llm_example examples/llm_integration_example.go
 package main
 
 import (
@@ -105,19 +110,28 @@ func main() {
 		}(),
 		Skills: []a2a.AgentSkill{
 			{
-				ID:          "general-assistance",
-				Name:        "General Assistance",
-				Description: "Provides helpful responses to general questions and requests",
+				ID:   "general-assistance",
+				Name: "General Assistance",
+				Description: func() *string {
+					s := "Provides helpful responses to general questions and requests"
+					return &s
+				}(),
 			},
 			{
-				ID:          "weather-info",
-				Name:        "Weather Information",
-				Description: "Provides weather information for a location",
+				ID:   "weather-info",
+				Name: "Weather Information",
+				Description: func() *string {
+					s := "Provides weather information for a location"
+					return &s
+				}(),
 			},
 			{
-				ID:          "calculator",
-				Name:        "Calculator",
-				Description: "Performs mathematical calculations",
+				ID:   "calculator",
+				Name: "Calculator",
+				Description: func() *string {
+					s := "Performs mathematical calculations"
+					return &s
+				}(),
 			},
 		},
 		Capabilities: &a2a.AgentCapabilities{
@@ -207,19 +221,24 @@ func runExample(a2aClient *client.Client, query string) {
 			}
 
 			if update.Type == "status" {
-				taskID = update.Status.ID
-				if update.Status.Status.State == a2a.TaskStateWorking && update.Status.Status.Message != nil {
+				// Extract task ID from the status update
+				if taskID == "" && update.Status != nil {
+					taskID = update.Status.TaskID
+				}
+
+				// Check if we have a message to display
+				if update.Status != nil && update.Status.State == a2a.TaskStateWorking && update.Status.Message != nil {
 					// Print agent's response
-					for _, part := range update.Status.Status.Message.Parts {
+					for _, part := range update.Status.Message.Parts {
 						if textPart, ok := part.(a2a.TextPart); ok {
 							fmt.Print(textPart.Text)
 						}
 					}
 				}
 			} else if update.Type == "artifact" {
-				// Print artifact content
-				for _, part := range update.Artifact.Parts {
-					if textPart, ok := part.(a2a.TextPart); ok {
+				// Print artifact content if it's a text part
+				if update.Artifact != nil && update.Artifact.Part != nil {
+					if textPart, ok := update.Artifact.Part.(a2a.TextPart); ok {
 						fmt.Print(textPart.Text)
 					}
 				}
@@ -232,11 +251,11 @@ func runExample(a2aClient *client.Client, query string) {
 			fmt.Println("\nTimeout waiting for response.")
 
 			// Cancel the task
-			_, err := a2aClient.CancelTask(context.Background(), &a2a.TaskIdParams{
-				ID: taskID,
-			})
-			if err != nil {
-				log.Printf("Failed to cancel task: %v", err)
+			if taskID != "" {
+				_, err := a2aClient.CancelTask(context.Background(), taskID)
+				if err != nil {
+					log.Printf("Failed to cancel task: %v", err)
+				}
 			}
 
 			os.Exit(1)
