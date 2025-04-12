@@ -195,17 +195,63 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
     *   ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
     *   ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
     *   ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
-4.  **Phase 4: Refinement & Documentation:** 🔄 IN PROGRESS
+4.  **Phase 4: Standalone Client & Server Applications:** ⬜ PLANNED
+    *   **Server Application (`cmd/a2a-server`):**
+        *   ⬜ Create command-line interface with flags for configuration:
+            *   ⬜ Listen address and port
+            *   ⬜ Agent card file path
+            *   ⬜ Authentication settings
+            *   ⬜ Task handler plugin path
+        *   ⬜ Implement configuration file support (YAML/JSON):
+            *   ⬜ Server settings
+            *   ⬜ Agent card configuration
+            *   ⬜ Authentication settings
+        *   ⬜ Develop plugin system for task handlers:
+            *   ⬜ Define plugin interface
+            *   ⬜ Implement dynamic loading of plugins
+            *   ⬜ Create sample plugins (echo, file processor, etc.)
+        *   ⬜ Add logging:
+            *   ⬜ Configurable log levels
+            *   ⬜ Optional Request/response logging
+            *   ⬜ Optional Task execution logging
+        *   ⬜ Add graceful shutdown handling
+        *   ⬜ Create Dockerfile and docker-compose examples
+        *   ⬜ Implement monitoring endpoints:
+            *   ⬜ Health check endpoint
+            *   ⬜ Basic Metrics endpoint (Prometheus compatible)
+            *   ⬜ Basic Task status dashboard (but don't implement a full JS/TS web UI as a standalone app)
+    *   **Client Application (`cmd/a2a-client`):**
+        *   ⬜ Create command-line interface with subcommands:
+            *   ⬜ `send` - Send a task to an agent
+            *   ⬜ `get` - Get task status
+            *   ⬜ `cancel` - Cancel a task
+            *   ⬜ `subscribe` - Subscribe to task updates
+            *   ⬜ `push` - Configure push notifications
+            *   ⬜ `card` - Get agent card information
+        *   ⬜ Add configuration file support:
+            *   ⬜ Default agent URLs
+            *   ⬜ Authentication settings
+            *   ⬜ Output formatting preferences
+        *   ⬜ Implement interactive mode:
+            *   ⬜ TUI (Terminal User Interface) for task interaction
+            *   ⬜ History
+            *   ⬜ Live task status updates
+        *   ⬜ Implement various output formats:
+            *   ⬜ JSON
+            *   ⬜ Pretty-printed
+    *   **Common Infrastructure:**
+        *   ⬜ Shared configuration handling
+        *   ⬜ Authentication utilities
+        *   ⬜ Error handling and reporting
+        *   ⬜ Documentation and examples
+        *   ⬜ Installation scripts and packages
+5.  **Phase 5: Refinement & Documentation:** 🔄 IN PROGRESS
     *   ✅ Create comprehensive README with architecture overview and usage examples.
-    *   ⬜ Add more comprehensive examples:
-        *   ⬜ Simple server example
-        *   ⬜ Simple client example
-        *   ⬜ Integration with MCP example
     *   ⬜ Write detailed package documentation (godoc).
     *   ⬜ Refine APIs based on usage feedback.
     *   ⬜ Improve test coverage.
     *   ⬜ Add helper utilities (e.g., validating `AgentCard`s).
-    *   ⬜ Create CI/CD pipeline for testing and releases.
+    *   ⬜ Create Github Actions CI/CD pipeline for testing and releases with semver versioning.
 
 ## 10. Example: Web UI Integration (Conceptual)
 
