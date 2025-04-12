@@ -78,6 +78,17 @@ type ServerConfig struct {
 	PluginPath    string          `json:"pluginPath" yaml:"pluginPath"`
 }
 
+// LLMConfig is a config for use with gollm
+type LLMConfig struct {
+	Provider     string                 `json:"provider" yaml:"provider"`
+	Model        string                 `json:"model,omitempty" yaml:"model,omitempty"`
+	APIKey       string                 `json:"apiKey,omitempty" yaml:"apiKey,omitempty"`
+	SystemPrompt string                 `json:"systemPrompt,omitempty" yaml:"systemPrompt,omitempty"`
+	BaseUrl      string                 `json:"baseUrl,omitempty" yaml:"baseUrl,omitempty"`
+	Options      map[string]interface{} `json:"options,omitempty" yaml:"options,omitempty"`
+}
+
+
 // ClientConfig represents the configuration for the A2A client.
 type ClientConfig struct {
 	DefaultAgentURL string                 `json:"defaultAgentUrl" yaml:"defaultAgentUrl"`
@@ -283,6 +294,17 @@ func DefaultServerConfig() ServerConfig {
 	}
 }
 
+// DefaultLLMConfig returns a default LLM config.
+func DefaultLLMConfig() LLMConfig {
+	return LLMConfig{
+		Provider:     "openai",
+		Model:        "",
+		APIKey:       "",
+		SystemPrompt: "",
+		BaseUrl:      "",
+		Options: map[string]interface{}{"temperature": 0.7},
+	}
+}
 // DefaultClientConfig returns a default client configuration.
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{

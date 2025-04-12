@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"errors"
+	"github.com/sammcj/go-a2a/llm/gollm"
 	"fmt"
 	"net/http"
 )
@@ -30,6 +32,12 @@ func NewServer(opts ...Option) (*Server, error) {
 		// TODO: Check if TaskHandler is nil and handle appropriately
 	}
 
+	if cfg.AgentEngine == nil {
+		if cfg.GollmOptions == nil {
+			return nil, errors.New("gollm options must be set when agent engine not set")
+		}
+		cfg.AgentEngine = NewBasicGollmAgent(*cfg.GollmOptions, cfg.TaskHandler)
+	}
 	// TODO: Validate other config options (e.g., address)
 
 	s := &Server{
@@ -90,6 +98,9 @@ func (s *Server) Start() error {
 	}
 	return nil
 }
+func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request) {
+	s.config.AgentEngine.HandleRequest(w,r)
+}
 
 // Stop gracefully shuts down the server.
 func (s *Server) Stop(ctx context.Context) error {
@@ -103,5 +114,4 @@ func (s *Server) Stop(ctx context.Context) error {
 	fmt.Println("A2A server stopped.")
 	return nil
 }
-
 // Note: The handleA2ARequest method is now implemented in handler.go

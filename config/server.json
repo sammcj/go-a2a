@@ -1,6 +1,14 @@
 {
   "listenAddress": ":8080",
   "agentCardPath": "/.well-known/agent.json",
+  "llmConfig": {
+    "provider": "openai",
+    "options": {
+      "temperature": 0.8
+    },
+    "baseUrl": null,
+    "apiKey": null
+  },
   "a2aPathPrefix": "/a2a",
   "logLevel": "info",
   "pluginPath": "/app/plugins",

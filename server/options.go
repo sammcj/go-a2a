@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/cmd/common"
 	"github.com/sammcj/go-a2a/llm"
 	"github.com/sammcj/go-a2a/llm/gollm"
 )
@@ -22,6 +23,7 @@ type Config struct {
 	AgentEngine   AgentEngine    // The agent engine implementation
 	AuthValidator AuthValidator  // Optional authentication validator function
 	// TODO: Add fields for optional TLS config, middleware, SSE config, etc.
+	gollmOptions  *gollm.Options
 }
 
 // Option is a function that modifies the server configuration.
@@ -116,6 +118,77 @@ func WithBasicGollmAgent(provider, model, apiKey, systemPrompt string) Option {
 		c.AgentEngine = NewBasicLLMAgent(adapter, systemPrompt)
 	}
 }
+
+// WithGollmOptions sets a custom gollm.Options struct
+func WithGollmOptions(options *gollm.Options) Option {
+	return func(c *Config) {
+		c.gollmOptions = options
+	}
+}
+
+// LLMConfig is a config for use with gollm
+type LLMConfig struct {
+	Provider     string                 `json:"provider" yaml:"provider"`
+	Model        string                 `json:"model,omitempty" yaml:"model,omitempty"`
+	APIKey       string                 `json:"apiKey,omitempty" yaml:"apiKey,omitempty"`
+	SystemPrompt string                 `json:"systemPrompt,omitempty" yaml:"systemPrompt,omitempty"`
+	BaseUrl      string                 `json:"baseUrl,omitempty" yaml:"baseUrl,omitempty"`
+	Options      map[string]interface{} `json:"options,omitempty" yaml:"options,omitempty"`
+}
+
+// NewGollmOptions creates new gollm options from an LLMConfig
+func NewGollmOptions(llmConfig LLMConfig) (*gollm.Options, error) {
+	options := []func(*gollm.Options) error{}
+
+	if llmConfig.Provider != "" {
+		options = append(options, gollm.WithProvider(llmConfig.Provider))
+	}
+	if llmConfig.Model != "" {
+		options = append(options, gollm.WithModel(llmConfig.Model))
+	}
+	if llmConfig.APIKey != "" {
+		options = append(options, gollm.WithAPIKey(llmConfig.APIKey))
+	}
+	if llmConfig.SystemPrompt != "" {
+		options = append(options, gollm.WithSystemPrompt(llmConfig.SystemPrompt))
+	}
+	if llmConfig.BaseUrl != "" {
+		options = append(options, gollm.WithBaseURL(llmConfig.BaseUrl))
+	}
+	if len(llmConfig.Options) > 0 {
+		options = append(options, gollm.WithOptions(llmConfig.Options))
+	}
+
+	return gollm.NewOptions(options...)
+}
+
+// DefaultLLMConfig returns a default LLM config.
+func DefaultLLMConfig() LLMConfig {
+	return LLMConfig{
+		Provider:     "openai",
+		Model:        "",
+		APIKey:       "",
+		SystemPrompt: "",
+		BaseUrl:      "",
+		Options: map[string]interface{}{
+			"temperature": 0.7,
+		},
+	}
+}
+
+// NewGollmOptionsFromConfig creates new gollm options from a common.LLMConfig
+func NewGollmOptionsFromConfig(llmConfig common.LLMConfig) (*gollm.Options, error) {
+	return NewGollmOptions(LLMConfig{
+		Provider:     llmConfig.Provider,
+		Model:        llmConfig.Model,
+		APIKey:       llmConfig.ApiKey,
+		SystemPrompt: llmConfig.SystemPrompt,
+		BaseUrl:      llmConfig.BaseUrl,
+		Options:      llmConfig.Options,
+	})
+}
+
+
 
 // WithToolAugmentedAgent creates a ToolAugmentedAgent with the provided LLM interface and tools.
 func WithToolAugmentedAgent(llmInterface llm.LLMInterface, tools []Tool) Option {

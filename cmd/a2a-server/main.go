@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/cmd/common"
+	"github.com/sammcj/go-a2a/llm/gollm"
 	"github.com/sammcj/go-a2a/server"
 )
 
@@ -61,6 +62,20 @@ func main() {
 		}
 	}
 
+	// Load llm config
+	var llmConfig common.LLMConfig
+	if config.LLMConfig != nil {
+		llmConfig = *config.LLMConfig
+	} else {
+		llmConfig = common.DefaultLLMConfig()
+	}
+
+	gollmOpts, err := server.NewGollmOptionsFromConfig(llmConfig)
+	if err != nil {
+		logger.Fatal("Failed to create gollm options: %v", err)
+		}
+	}
+
 	// Load agent card
 	var agentCard *common.AgentCardConfig
 	if *agentCardFile != "" {
@@ -107,6 +122,7 @@ func main() {
 		server.WithAgentCardPath(config.AgentCardPath),
 		server.WithA2APathPrefix(config.A2APathPrefix),
 		server.WithTaskHandler(taskHandler),
+		server.WithGollmOptions(gollmOpts),
 	}
 
 	// Create server
