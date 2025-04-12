@@ -3,6 +3,7 @@
   "agentCardPath": "/.well-known/agent.json",
   "a2aPathPrefix": "/a2a",
   "logLevel": "info",
+  "pluginPath": "./plugins",
   "agentCard": {
     "a2aVersion": "1.0",
     "id": "echo-agent",
