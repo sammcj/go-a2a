@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
-	"github.com/sammcj/go-a2a/cmd/common"
 	"github.com/sammcj/go-a2a/server"
 )
 
@@ -71,4 +70,4 @@ func (p *CustomEchoPlugin) GetSkills() []a2a.AgentSkill {
 }
 
 // Plugin is the exported symbol that the server will look for.
-var Plugin common.TaskHandlerPlugin = &CustomEchoPlugin{}
+// var Plugin common.TaskHandlerPlugin = &CustomEchoPlugin{} // TODO: fix this?

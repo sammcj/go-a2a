@@ -1,19 +1,15 @@
 package test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
-	"github.com/sammcj/go-a2a/llm"
 	"github.com/sammcj/go-a2a/llm/gollm"
 	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/server"
