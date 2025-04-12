@@ -368,7 +368,7 @@ See the `examples` directory for more detailed examples:
 
 ## LLM Integration
 
-The go-a2a library can be integrated with Large Language Models (LLMs) to create intelligent agents that can understand and respond to natural language requests. We use [gollm](https://github.com/teilomillet/gollm) for LLM integration, which provides a unified API for interacting with various LLM providers.
+The go-a2a library includes built-in support for Large Language Models (LLMs) to create intelligent agents that can understand and respond to natural language requests. The library provides a flexible, modular architecture for LLM integration with a focus on the [gollm](https://github.com/teilomillet/gollm) library as the primary adapter.
 
 ### Architecture
 
@@ -378,210 +378,135 @@ graph TD
     classDef llm fill:#E5F5E0,stroke:#31A354,color:#31A354
     classDef components fill:#E6E6FA,stroke:#756BB1,color:#756BB1
     classDef process fill:#EAF5EA,stroke:#C6E7C6,color:#77AD77
-    classDef stop fill:#E5E1F2,stroke:#C7C0DE,color:#8471BF
-    classDef data fill:#EFF3FF,stroke:#9ECAE1,color:#3182BD
-    classDef decision fill:#FFF5EB,stroke:#FD8D3C,color:#E6550D
-    classDef storage fill:#F2F0F7,stroke:#BCBDDC,color:#756BB1
+    classDef primary fill:#C6DBEF,stroke:#3182BD,color:#3182BD
     classDef api fill:#FFF5F0,stroke:#FD9272,color:#A63603
-    classDef error fill:#FCBBA1,stroke:#FB6A4A,color:#CB181D
 
     Client[Client Application] -->|Sends Task| A2AServer[A2A Server]:::components
     A2AServer -->|Processes Task| TaskManager[Task Manager]:::components
-    TaskManager -->|Invokes| TaskHandler[Task Handler]:::process
-    TaskHandler -->|Uses| LLMHandler[LLM Handler]:::llm
+    TaskManager -->|Delegates to| AgentEngine[Agent Engine]:::components
 
-    LLMHandler -->|Calls| GOLLM[gollm Library]:::llm
-    GOLLM -->|Connects to| LLMProviders[LLM Providers<br>OpenAI, Anthropic, etc.]:::api
+    AgentEngine -->|Uses| LLMInterface[LLM Interface]:::components
 
-    LLMHandler -->|Returns| TaskHandler
-    TaskHandler -->|Updates| TaskManager
-    TaskManager -->|Streams Updates| A2AServer
-    A2AServer -->|SSE/Push Notifications| Client
+    LLMInterface -->|Primary Implementation| GollmAdapter[Gollm Adapter]:::primary
+
+    GollmAdapter -->|Uses| Gollm[gollm Library]:::primary
+
+    Gollm -->|Connects to| Ollama[Ollama]:::llm
+    Gollm -->|Connects to| OpenAI[OpenAI]:::llm
+    Gollm -->|Connects to| OtherProviders[Other Providers]:::llm
 
     subgraph "go-a2a Library"
         A2AServer
         TaskManager
-    end
-
-    subgraph "Application Code"
-        TaskHandler
-        LLMHandler
+        AgentEngine
+        LLMInterface
+        GollmAdapter
     end
 ```
 
+### Key Components
+
+1. **LLM Interface**: A standard interface for interacting with LLMs
+2. **Agent Engine**: Processes tasks using LLMs and optional tools
+3. **gollm Adapter**: Primary implementation of the LLM interface using gollm
+
 ### Implementation
 
-To integrate LLMs with your A2A agent, you can create an LLM handler that uses gollm to process tasks:
+The go-a2a library provides built-in components for LLM integration:
 
 ```go
 package main
 
 import (
-	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/server"
-	"github.com/teilomillet/gollm"
 )
 
-// LLMHandler handles LLM interactions for the A2A agent
-type LLMHandler struct {
-	llm *gollm.LLM
-}
-
-// NewLLMHandler creates a new LLM handler
-func NewLLMHandler() (*LLMHandler, error) {
-	// Initialize gollm with your preferred provider and model
-	llm, err := gollm.NewLLM(
-		gollm.SetProvider("openai"),
-		gollm.SetModel("gpt-4o"),
-		gollm.SetAPIKey(os.Getenv("OPENAI_API_KEY")),
-		gollm.SetMaxTokens(1000),
-		gollm.SetMemory(4096), // Enable memory to maintain context
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LLM: %w", err)
-	}
-
-	return &LLMHandler{llm: llm}, nil
-}
-
-// ProcessMessage processes a user message and returns a response
-func (h *LLMHandler) ProcessMessage(ctx context.Context, message string) (string, error) {
-	// Create a prompt with the user's message
-	prompt := gollm.NewPrompt(message,
-		gollm.WithDirectives(
-			"You are a helpful assistant",
-			"Provide clear and concise responses",
-		),
-	)
-
-	// Generate a response
-	response, err := h.llm.Generate(ctx, prompt)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate response: %w", err)
-	}
-
-	return response, nil
-}
-
-// Main task handler for the A2A server
-func taskHandler(ctx context.Context, taskCtx server.TaskContext) (<-chan server.TaskYieldUpdate, error) {
-	updateChan := make(chan server.TaskYieldUpdate)
-
-	// Create an LLM handler
-	llmHandler, err := NewLLMHandler()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LLM handler: %w", err)
-	}
-
-	go func() {
-		defer close(updateChan)
-
-		// Extract the user's message
-		userMessage := taskCtx.UserMessage
-		var userText string
-		for _, part := range userMessage.Parts {
-			if textPart, ok := part.(a2a.TextPart); ok {
-				userText = textPart.Text
-				break
-			}
-		}
-
-		// Process the message with the LLM
-		responseText, err := llmHandler.ProcessMessage(ctx, userText)
-		if err != nil {
-			// Send a failed status update
-			updateChan <- server.StatusUpdate{
-				State: a2a.TaskStateFailed,
-				Message: &a2a.Message{
-					Role:      a2a.RoleSystem,
-					Timestamp: time.Now(),
-					Parts: []a2a.Part{
-						a2a.TextPart{
-							Type: "text",
-							Text: fmt.Sprintf("Failed to process message: %v", err),
-						},
-					},
-				},
-			}
-			return
-		}
-
-		// Create a response message
-		responseMessage := a2a.Message{
-			Role:      a2a.RoleAgent,
-			Timestamp: time.Now(),
-			Parts: []a2a.Part{
-				a2a.TextPart{
-					Type: "text",
-					Text: responseText,
-				},
+func main() {
+	// Create an agent card
+	agentCard := &a2a.AgentCard{
+		A2AVersion: "1.0",
+		ID:         "assistant-agent",
+		Name:       "Assistant Agent",
+		Description: func() *string {
+			s := "An intelligent assistant powered by Ollama"
+			return &s
+		}(),
+		Skills: []a2a.AgentSkill{
+			{
+				ID:   "general-assistance",
+				Name: "General Assistance",
 			},
-		}
+		},
+		Capabilities: &a2a.AgentCapabilities{
+			SupportsStreaming: true,
+		},
+	}
 
-		// Send a working status update with the response
-		updateChan <- server.StatusUpdate{
-			State:   a2a.TaskStateWorking,
-			Message: &responseMessage,
-		}
+	// Create and start the server with a gollm-based agent
+	a2aServer, err := server.NewServer(
+		server.WithAgentCard(agentCard),
+		server.WithBasicGollmAgent(
+			"ollama",                // provider
+			"llama3",                // model
+			"",                      // API key (not needed for Ollama)
+			"You are a helpful assistant that responds to user queries.",
+		),
+		server.WithListenAddress(":8080"),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create A2A server: %v", err)
+	}
 
-		// Send a completed status update
-		updateChan <- server.StatusUpdate{
-			State: a2a.TaskStateCompleted,
-		}
-	}()
-
-	return updateChan, nil
+	// Start the server
+	if err := a2aServer.Start(); err != nil {
+		log.Fatalf("Failed to start A2A server: %v", err)
+	}
 }
 ```
 
-### Advanced LLM Features
+### Supported LLM Providers
 
-The gollm library provides several advanced features that can be used to enhance your A2A agents:
+The gollm adapter focuses on supporting:
 
-1. **Chain of Thought Reasoning**: Use the `ChainOfThought` function for complex reasoning tasks.
+1. **Ollama**: For local model deployment and inference
+2. **OpenAI-compatible APIs**: For compatibility with various hosted services
 
-2. **Structured Output**: Ensure your LLM outputs are in a valid format using JSON schema validation.
+### Advanced Features
 
-3. **Prompt Templates**: Create reusable prompt templates for consistent prompt generation.
+The LLM integration supports several advanced features:
 
-4. **Model Comparison**: Compare responses from different LLM providers or models to find the best one for your task.
-
-5. **Memory Retention**: Maintain context across multiple interactions for more coherent conversations.
-
-### Example: Structured Task Processing
-
-Here's an example of how to process tasks with structured outputs:
+1. **Tool Augmentation**: Enhance your agents with tools like weather APIs, calculators, etc.
 
 ```go
-func processStructuredTask(ctx context.Context, llmHandler *LLMHandler, task string) (map[string]interface{}, error) {
-	// Create a prompt for structured output
-	prompt := gollm.NewPrompt(task,
-		gollm.WithDirectives(
-			"Process this task and provide a structured response",
-			"Be thorough and accurate",
-		),
-		gollm.WithOutput("Respond in JSON format with 'result', 'confidence', and 'reasoning' fields."),
-	)
-
-	// Generate a response with JSON validation
-	response, err := llmHandler.llm.Generate(ctx, prompt, gollm.WithJSONSchemaValidation())
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate structured response: %w", err)
-	}
-
-	// Parse the JSON response
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return result, nil
-}
+// Create a server with a tool-augmented gollm agent
+server.WithToolAugmentedGollmAgent(
+    "openai",                 // provider
+    "gpt-4o",                 // model
+    os.Getenv("OPENAI_API_KEY"),
+    []server.Tool{weatherTool, calculatorTool},
+)
 ```
+
+2. **Streaming Responses**: Support for streaming LLM responses for real-time updates
+
+3. **Structured Output**: Ensure LLM outputs are in a valid format using JSON schema validation
+
+4. **Memory Retention**: Maintain context across multiple interactions for more coherent conversations
+
+```go
+// Create a custom gollm adapter with memory
+llmAdapter, err := gollm.NewAdapter(
+    gollm.WithProvider("ollama"),
+    gollm.WithModel("llama3"),
+    gollm.WithMemory(4096), // Enable memory for context retention
+)
+```
+
+5. **Custom Prompting**: Configure system prompts and directives for consistent agent behavior
 
 ## Development Status
 
