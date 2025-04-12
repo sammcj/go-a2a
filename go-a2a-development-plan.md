@@ -296,56 +296,56 @@ This architecture provides an all-in-one solution while maintaining flexibility 
     *   ✅ Implement MCP integration for tool handling (`server/mcp_client.go`).
     *   ✅ Create examples demonstrating MCP integration (`examples/mcp_integration_example.go`).
     *   ✅ Add support for more LLM providers through the gollm adapter.
-5.  **Phase 5: Standalone Client & Server Applications:** ⬜ PLANNED
+5.  **Phase 5: Standalone Client & Server Applications:** ✅ COMPLETED
     *   **Server Application (`cmd/a2a-server`):**
-        *   ⬜ Create command-line interface with flags for configuration:
-            *   ⬜ Listen address and port
-            *   ⬜ Agent card file path
-            *   ⬜ Authentication settings
-            *   ⬜ Task handler plugin path
-        *   ⬜ Implement configuration file support (YAML/JSON):
-            *   ⬜ Server settings
-            *   ⬜ Agent card configuration
-            *   ⬜ Authentication settings
-        *   ⬜ Develop plugin system for task handlers:
-            *   ⬜ Define plugin interface
-            *   ⬜ Implement dynamic loading of plugins
-            *   ⬜ Create sample plugins (echo, file processor, etc.)
-        *   ⬜ Add logging:
-            *   ⬜ Configurable log levels
-            *   ⬜ Optional Request/response logging
-            *   ⬜ Optional Task execution logging
-        *   ⬜ Add graceful shutdown handling
-        *   ⬜ Create Dockerfile and docker-compose
+        *   ✅ Create command-line interface with flags for configuration:
+            *   ✅ Listen address and port
+            *   ✅ Agent card file path
+            *   ✅ Authentication settings
+            *   ✅ Task handler plugin path
+        *   ✅ Implement configuration file support (YAML/JSON):
+            *   ✅ Server settings
+            *   ✅ Agent card configuration
+            *   ✅ Authentication settings
+        *   ✅ Develop plugin system for task handlers:
+            *   ✅ Define plugin interface
+            *   ✅ Implement dynamic loading of plugins
+            *   ✅ Create sample plugins (echo, file processor, etc.)
+        *   ✅ Add logging:
+            *   ✅ Configurable log levels
+            *   ✅ Optional Request/response logging
+            *   ✅ Optional Task execution logging
+        *   ✅ Add graceful shutdown handling
+        *   ✅ Create Dockerfile and docker-compose
         *   ⬜ Implement monitoring endpoints:
             *   ⬜ Health check endpoint
             *   ⬜ Basic Metrics endpoint (Prometheus compatible)
             *   ⬜ Basic Task status dashboard (but don't implement a full JS/TS web UI as a standalone app)
     *   **Client Application (`cmd/a2a-client`):**
-        *   ⬜ Create command-line interface with subcommands:
-            *   ⬜ `send` - Send a task to an agent
-            *   ⬜ `get` - Get task status
-            *   ⬜ `cancel` - Cancel a task
-            *   ⬜ `subscribe` - Subscribe to task updates
-            *   ⬜ `push` - Configure push notifications
-            *   ⬜ `card` - Get agent card information
-        *   ⬜ Add configuration file support:
-            *   ⬜ Default agent URLs
-            *   ⬜ Authentication settings
-            *   ⬜ Output formatting preferences
+        *   ✅ Create command-line interface with subcommands:
+            *   ✅ `send` - Send a task to an agent
+            *   ✅ `get` - Get task status
+            *   ✅ `cancel` - Cancel a task
+            *   ✅ `subscribe` - Subscribe to task updates
+            *   ✅ `push` - Configure push notifications
+            *   ✅ `card` - Get agent card information
+        *   ✅ Add configuration file support:
+            *   ✅ Default agent URLs
+            *   ✅ Authentication settings
+            *   ✅ Output formatting preferences
         *   ⬜ Implement interactive mode:
             *   ⬜ TUI (Terminal User Interface) for task interaction
             *   ⬜ History
             *   ⬜ Live task status updates
-        *   ⬜ Implement various output formats:
-            *   ⬜ JSON
-            *   ⬜ Pretty-printed
+        *   ✅ Implement various output formats:
+            *   ✅ JSON
+            *   ✅ Pretty-printed
     *   **Common Infrastructure:**
-        *   ⬜ Shared configuration handling
-        *   ⬜ Authentication utilities
-        *   ⬜ Error handling and reporting
-        *   ⬜ Documentation and examples
-        *   ⬜ Installation scripts and packages
+        *   ✅ Shared configuration handling
+        *   ✅ Authentication utilities
+        *   ✅ Error handling and reporting
+        *   ✅ Documentation and examples
+        *   ✅ Installation scripts and packages (Makefile)
 6.  **Phase 6: Refinement & Documentation:** 🔄 IN PROGRESS
     *   ✅ Create comprehensive README with architecture overview and usage examples.
     *   ⬜ Write detailed package documentation (godoc).
