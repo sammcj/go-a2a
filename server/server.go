@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"github.com/sammcj/go-a2a/llm/gollm"
 )
 
 // Server implements the A2A server functionality.
@@ -32,7 +33,7 @@ func NewServer(opts ...Option) (*Server, error) {
 	}
 
 	if cfg.AgentEngine == nil {
-		if cfg.GollmOptions == nil {
+		if cfg.gollmOptions == nil {
 			return nil, errors.New("gollm options must be set when agent engine not set")
 		}
 		cfg.AgentEngine = NewBasicGollmAgent(*cfg.GollmOptions, cfg.TaskHandler)
@@ -89,15 +90,15 @@ func NewServer(opts ...Option) (*Server, error) {
 
 // Start runs the A2A server. It blocks until the server is stopped.
 func (s *Server) Start() error {
-	// TODO: Log server start information (address, agent ID)
-	fmt.Printf("Starting A2A server for agent '%s' at %s%s\n", s.config.AgentCard.ID, s.config.ListenAddress, s.config.A2APathPrefix)
+	fmt.Printf("Starting A2A server for agent '%s' at %s%s with options: %+v\n", s.config.AgentCard.ID, s.config.ListenAddress, s.config.A2APathPrefix, s.config.gollmOptions)
 	err := s.httpServer.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("failed to start HTTP server: %w", err)
 	}
 	return nil
 }
-func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request) {
+
+func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request){
 	if handler, ok := s.config.AgentEngine.(interface{ HandleRequest(http.ResponseWriter, *http.Request) }); ok {
 		handler.HandleRequest(w, r)
 	} else {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sammcj/go-a2a/cmd/common"
+	"github.com/sammcj/go-a2a/pkg/config"
 	"github.com/sammcj/go-a2a/server"
 )
 
@@ -33,7 +34,7 @@ func main() {
 	logger.Info("Starting A2A server")
 
 	// Load configuration
-	var config common.ServerConfig
+	var config config.ServerConfig
 	if *configFile != "" {
 		logger.Info("Loading configuration from %s", *configFile)
 		loadedConfig, err := common.LoadConfig[common.ServerConfig](*configFile)
@@ -42,7 +43,7 @@ func main() {
 		}
 		config = *loadedConfig
 	} else {
-		// Use default configuration with command line overrides
+		// If no config file is specified, use default values
 		config = common.DefaultServerConfig()
 		if *listenAddress != "" {
 			config.ListenAddress = *listenAddress
@@ -61,16 +62,20 @@ func main() {
 		}
 	}
 
-	// Load llm config
-	llmConfig := common.DefaultLLMConfig()
+	// Load LLM config
+	var llmConfig config.LLMConfig
+	if config.LLMConfig.Provider != "" {
+		llmConfig = config.LLMConfig
+	} else {
+		llmConfig = config.DefaultLLMConfig()
+	}
 
 	gollmOpts, err := server.NewGollmOptionsFromConfig(llmConfig)
 	if err != nil {
 		logger.Fatal("Failed to create gollm options: %v", err)
 	}
 
-	// Load agent card
-	var agentCard *common.AgentCardConfig
+	var agentCard *config.AgentCardConfig
 	if *agentCardFile != "" {
 		logger.Info("Loading agent card from %s", *agentCardFile)
 		loadedCard, err := common.LoadConfig[common.AgentCardConfig](*agentCardFile)
@@ -79,11 +84,11 @@ func main() {
 		}
 		agentCard = loadedCard
 	} else {
-		// Use the agent card from the configuration
+		// If no agent card file is specified, use the agent card from the server configuration
 		agentCard = &config.AgentCard
 	}
 
-	// Convert agent card to A2A format
+	// Convert agent card config to A2A format
 	a2aAgentCard := common.ConvertToAgentCard(*agentCard)
 
 	// Load plugins
@@ -152,13 +157,13 @@ func main() {
 
 // saveDefaultConfig saves a default configuration file.
 func saveDefaultConfig(path string) error {
-	config := common.DefaultServerConfig()
+	config := config.DefaultServerConfig()
 	return common.SaveConfig(config, path)
 }
 
 // saveDefaultAgentCard saves a default agent card file.
 func saveDefaultAgentCard(path string) error {
-	config := common.DefaultServerConfig().AgentCard
+	config := config.DefaultServerConfig().AgentCard
 	return common.SaveConfig(config, path)
 }
 
