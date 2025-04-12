@@ -27,16 +27,16 @@ type TaskUpdate struct {
 
 // SSEClient handles Server-Sent Events (SSE) connections for A2A tasks.
 type SSEClient struct {
-	httpClient *http.Client
-	baseURL    string
+	httpClient  *http.Client
+	baseURL     string
 	authHeaders map[string]string
 }
 
 // NewSSEClient creates a new SSE client.
 func NewSSEClient(httpClient *http.Client, baseURL string, authHeaders map[string]string) *SSEClient {
 	return &SSEClient{
-		httpClient: httpClient,
-		baseURL:    baseURL,
+		httpClient:  httpClient,
+		baseURL:     baseURL,
 		authHeaders: authHeaders,
 	}
 }

@@ -1,14 +1,11 @@
-package common
+package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/sammcj/go-a2a/a2a"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -42,7 +39,7 @@ func TestLoadConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		filePath    string
-		expected    ServerConfig
+		expected    server.ServerConfig
 		expectedErr bool
 	}{
 		{
@@ -243,8 +240,8 @@ func TestDefaultServerConfig(t *testing.T) {
 				},
 			},
 			Capabilities: &CapabilitiesConfig{
-				SupportsStreaming:       true,
-				SupportsSessions:        true,
+				SupportsStreaming:        true,
+				SupportsSessions:         true,
 				SupportsPushNotification: true,
 			},
 		},

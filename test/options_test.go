@@ -1,10 +1,7 @@
-package test
+package client
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/llm/gollm"
@@ -22,30 +19,37 @@ func (m *MockTaskManager) Start() error {
 	args := m.Called()
 	return args.Error(0)
 }
+
 func (m *MockTaskManager) Stop() error {
 	args := m.Called()
 	return args.Error(0)
 }
-func (m *MockTaskManager) AddTask(task *a2a.AgentTask) error {
+
+func (m *MockTaskManager) AddTask(task *a2a.Task) error {
 	args := m.Called(task)
 	return args.Error(0)
 }
-func (m *MockTaskManager) GetTask(taskID string) (*a2a.AgentTask, error) {
+
+func (m *MockTaskManager) GetTask(taskID string) (*a2a.Task, error) {
 	args := m.Called(taskID)
-	return args.Get(0).(*a2a.AgentTask), args.Error(1)
+	return args.Get(0).(*a2a.Task), args.Error(1)
 }
-func (m *MockTaskManager) GetAllTasks() ([]*a2a.AgentTask, error) {
+
+func (m *MockTaskManager) GetAllTasks() ([]*a2a.Task, error) {
 	args := m.Called()
-	return args.Get(0).([]*a2a.AgentTask), args.Error(1)
+	return args.Get(0).([]*a2a.Task), args.Error(1)
 }
-func (m *MockTaskManager) GetTasks(taskIDs []string) ([]*a2a.AgentTask, error) {
+
+func (m *MockTaskManager) GetTasks(taskIDs []string) ([]*a2a.Task, error) {
 	args := m.Called(taskIDs)
-	return args.Get(0).([]*a2a.AgentTask), args.Error(1)
+	return args.Get(0).([]*a2a.Task), args.Error(1)
 }
+
 func (m *MockTaskManager) DeleteTask(taskID string) error {
 	args := m.Called(taskID)
 	return args.Error(0)
 }
+
 func (m *MockTaskManager) DeleteAllTasks() error {
 	args := m.Called()
 	return args.Error(0)
@@ -56,7 +60,7 @@ type MockTaskHandler struct {
 	mock.Mock
 }
 
-func (m *MockTaskHandler) HandleTask(task *a2a.AgentTask) error {
+func (m *MockTaskHandler) HandleTask(task *a2a.Task) error {
 	args := m.Called(task)
 	return args.Error(0)
 }
@@ -88,8 +92,14 @@ func TestNewServer(t *testing.T) {
 			expectedErr: true,
 		},
 		{
-			name:        "Valid Configuration with gollm options",
-			opts:        []server.Option{server.WithAgentCard(agentCard), server.WithGollmOptions(&gollm.Options{Provider: "openai"})},
+			name: "Valid Configuration with gollm options",
+			opts: []server.Option{
+				server.WithAgentCard(agentCard),
+				server.WithGollmOptions([]gollm.Option{
+					gollm.WithProvider("test"),
+					gollm.WithModel("test"),
+					gollm.WithAPIKey("test"),
+				})},
 			expectedErr: false,
 		},
 		{
@@ -104,4 +114,9 @@ func TestNewServer(t *testing.T) {
 			_, err := server.NewServer(tt.opts...)
 			if tt.expectedErr {
 				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
+		})
+	}
+}

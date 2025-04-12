@@ -29,8 +29,8 @@ func (s StatusUpdate) isTaskYieldUpdate() {}
 
 // ArtifactUpdate represents an artifact being added to a task.
 type ArtifactUpdate struct {
-	Part     a2a.Part                // The artifact part
-	Metadata map[string]interface{}  // Optional metadata for the artifact
+	Part     a2a.Part               // The artifact part
+	Metadata map[string]interface{} // Optional metadata for the artifact
 }
 
 // Ensure ArtifactUpdate implements YieldUpdate.

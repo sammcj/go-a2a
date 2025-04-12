@@ -101,7 +101,7 @@ type FileContent struct {
 
 // DataPart represents structured data.
 type DataPart struct {
-	Type     string      `json:"type"` // Should always be "data"
+	Type     string      `json:"type"`     // Should always be "data"
 	MimeType string      `json:"mimeType"` // e.g., "application/json"
 	Data     interface{} `json:"data"`     // The actual structured data
 }
@@ -112,19 +112,19 @@ func (DataPart) isPart() {}
 
 // AgentCard describes an A2A agent.
 type AgentCard struct {
-	A2AVersion     string              `json:"a2aVersion"` // e.g., "1.0"
-	ID             string              `json:"id"`
-	Name           string              `json:"name"`
-	Description    *string             `json:"description,omitempty"`
-	IconURI        *string             `json:"iconUri,omitempty"`
-	Provider       *AgentProvider      `json:"provider,omitempty"`
-	Skills         []AgentSkill        `json:"skills"`
-	Capabilities   *AgentCapabilities  `json:"capabilities,omitempty"`
-	Authentication []AgentAuthentication `json:"authentication,omitempty"`
-	ContactEmail   *string             `json:"contactEmail,omitempty"`
-	LegalInfoURI   *string             `json:"legalInfoUri,omitempty"`
-	HomepageURI    *string             `json:"homepageUri,omitempty"`
-	DocumentationURI *string           `json:"documentationUri,omitempty"`
+	A2AVersion       string                `json:"a2aVersion"` // e.g., "1.0"
+	ID               string                `json:"id"`
+	Name             string                `json:"name"`
+	Description      *string               `json:"description,omitempty"`
+	IconURI          *string               `json:"iconUri,omitempty"`
+	Provider         *AgentProvider        `json:"provider,omitempty"`
+	Skills           []AgentSkill          `json:"skills"`
+	Capabilities     *AgentCapabilities    `json:"capabilities,omitempty"`
+	Authentication   []AgentAuthentication `json:"authentication,omitempty"`
+	ContactEmail     *string               `json:"contactEmail,omitempty"`
+	LegalInfoURI     *string               `json:"legalInfoUri,omitempty"`
+	HomepageURI      *string               `json:"homepageUri,omitempty"`
+	DocumentationURI *string               `json:"documentationUri,omitempty"`
 }
 
 // AgentProvider describes the provider of the agent.
@@ -144,8 +144,8 @@ type AgentSkill struct {
 
 // AgentCapabilities describes the capabilities of the agent.
 type AgentCapabilities struct {
-	SupportsStreaming      bool `json:"supportsStreaming"`
-	SupportsSessions       bool `json:"supportsSessions"`
+	SupportsStreaming        bool `json:"supportsStreaming"`
+	SupportsSessions         bool `json:"supportsSessions"`
 	SupportsPushNotification bool `json:"supportsPushNotification"`
 	// Add other capabilities as defined in the spec
 }
@@ -164,13 +164,13 @@ type PushNotificationConfig struct {
 	TaskID           string              `json:"taskId"`
 	URL              string              `json:"url"`
 	Authentication   *AuthenticationInfo `json:"authentication,omitempty"`
-	IncludeTaskData  *bool               `json:"includeTaskData,omitempty"` // Default true
+	IncludeTaskData  *bool               `json:"includeTaskData,omitempty"`  // Default true
 	IncludeArtifacts *bool               `json:"includeArtifacts,omitempty"` // Default false
 }
 
 // AuthenticationInfo provides details for authenticating push notification requests.
 type AuthenticationInfo struct {
-	Type          string      `json:"type"` // e.g., "bearer", "header"
+	Type          string      `json:"type"`          // e.g., "bearer", "header"
 	Configuration interface{} `json:"configuration"` // e.g., {"token": "..."} or {"headerName": "X-API-Key", "value": "..."}
 }
 
@@ -186,10 +186,10 @@ type JSONRPCRequest struct {
 
 // JSONRPCResponse represents a JSON-RPC response object.
 type JSONRPCResponse struct {
-	JSONRPC string      `json:"jsonrpc"` // Should be "2.0"
-	Result  interface{} `json:"result,omitempty"`
+	JSONRPC string        `json:"jsonrpc"` // Should be "2.0"
+	Result  interface{}   `json:"result,omitempty"`
 	Error   *JSONRPCError `json:"error,omitempty"`
-	ID      interface{} `json:"id"` // Should match the request ID
+	ID      interface{}   `json:"id"` // Should match the request ID
 }
 
 // --- Specific Method Params/Results (Examples - To be expanded) ---
@@ -222,7 +222,6 @@ type TaskPushNotificationConfigParams struct {
 	IncludeTaskData  *bool               `json:"includeTaskData,omitempty"`
 	IncludeArtifacts *bool               `json:"includeArtifacts,omitempty"`
 }
-
 
 // --- SSE Event Structures ---
 

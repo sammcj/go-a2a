@@ -103,8 +103,8 @@ func main() {
 			},
 		},
 		Capabilities: &a2a.AgentCapabilities{
-			SupportsStreaming:       true,
-			SupportsSessions:        true,
+			SupportsStreaming:        true,
+			SupportsSessions:         true,
 			SupportsPushNotification: true,
 		},
 		Authentication: []a2a.AgentAuthentication{

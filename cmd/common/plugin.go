@@ -66,7 +66,7 @@ func LoadPlugins(dir string) ([]TaskHandlerPlugin, error) {
 func MergeTaskHandlers(plugins []TaskHandlerPlugin) task.Handler {
 	// Create a map of skill ID to task handler
 	handlers := make(map[string]task.Handler)
-	for _, p := range plugins{
+	for _, p := range plugins {
 		handler := p.GetTaskHandler()
 		for _, skill := range p.GetSkills() {
 			handlers[skill.ID] = handler

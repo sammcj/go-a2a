@@ -47,11 +47,11 @@ func NewAdapter(opts ...Option) (*Adapter, error) {
 
 	// Create model info
 	modelInfo := llm.LLMModelInfo{
-		Name:            options.Model,
-		Provider:        options.Provider,
-		MaxContextSize:  options.MaxContextSize,
-		Capabilities:    options.Capabilities,
-		InputModalities: options.InputModalities,
+		Name:             options.Model,
+		Provider:         options.Provider,
+		MaxContextSize:   options.MaxContextSize,
+		Capabilities:     options.Capabilities,
+		InputModalities:  options.InputModalities,
 		OutputModalities: options.OutputModalities,
 	}
 

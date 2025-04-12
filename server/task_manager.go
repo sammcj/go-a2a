@@ -38,11 +38,11 @@ type TaskManager interface {
 
 // InMemoryTaskManager is a basic implementation of TaskManager that stores tasks in memory.
 type InMemoryTaskManager struct {
-	tasks       map[string]*a2a.Task                      // Map of task ID to task
-	pushConfigs map[string]*a2a.PushNotificationConfig    // Map of task ID to push notification config
-	taskHandler task.Handler                              // Application-specific task handler
-	pushNotifier *PushNotifier                            // Push notification sender
-	mu          sync.RWMutex                              // Mutex for thread safety
+	tasks        map[string]*a2a.Task                   // Map of task ID to task
+	pushConfigs  map[string]*a2a.PushNotificationConfig // Map of task ID to push notification config
+	taskHandler  task.Handler                           // Application-specific task handler
+	pushNotifier *PushNotifier                          // Push notification sender
+	mu           sync.RWMutex                           // Mutex for thread safety
 	// TODO: Add fields for SSE connections, active tasks, etc.
 }
 

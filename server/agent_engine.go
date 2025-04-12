@@ -51,8 +51,8 @@ func NewBasicLLMAgent(llmInterface llm.LLMInterface, systemPrompt string) *Basic
 		llm:          llmInterface,
 		systemPrompt: systemPrompt,
 		capabilities: AgentCapabilities{
-			SupportsStreaming:       true,
-			SupportedInputModalities: modelInfo.InputModalities,
+			SupportsStreaming:         true,
+			SupportedInputModalities:  modelInfo.InputModalities,
 			SupportedOutputModalities: modelInfo.OutputModalities,
 		},
 	}
@@ -167,8 +167,8 @@ func NewToolAugmentedAgent(llmInterface llm.LLMInterface, tools []Tool) *ToolAug
 		tools:        tools,
 		systemPrompt: systemPrompt,
 		capabilities: AgentCapabilities{
-			SupportsStreaming:       true,
-			SupportedInputModalities: modelInfo.InputModalities,
+			SupportsStreaming:         true,
+			SupportedInputModalities:  modelInfo.InputModalities,
 			SupportedOutputModalities: modelInfo.OutputModalities,
 		},
 	}

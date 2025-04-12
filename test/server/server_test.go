@@ -93,7 +93,7 @@ func TestNewServer(t *testing.T) {
 				server.WithTaskHandler(func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
 					return nil, nil
 				}),
-				server.WithBasicGollmAgent("test","test","test","test"),
+				server.WithBasicGollmAgent("test", "test", "test", "test"),
 			},
 			expectedError: nil,
 		},
@@ -116,7 +116,7 @@ func TestNewServer(t *testing.T) {
 					return nil, nil
 				}),
 				server.WithGollmOptions(&gollm.Options{Provider: "test"}),
-				server.WithBasicGollmAgent("test","test","test","test"),
+				server.WithBasicGollmAgent("test", "test", "test", "test"),
 			},
 			expectedError: nil,
 		},
@@ -134,7 +134,9 @@ func TestNewServer(t *testing.T) {
 			name: "ValidDefaultConfig",
 			opts: []server.Option{
 				server.WithAgentCard(&a2a.AgentCard{ID: "test-agent"}),
-				server.WithTaskHandler(func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) { return nil, nil }),
+				server.WithTaskHandler(func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
+					return nil, nil
+				}),
 			},
 			expectedError: nil,
 		},

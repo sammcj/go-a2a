@@ -272,12 +272,12 @@ func NewMCPToolAugmentedAgent(llmInterface llm.LLMInterface, mcpClient MCPClient
 	systemPrompt += "I will execute the tool and return the result to you."
 
 	return &MCPToolAugmentedAgent{
-		llm:       llmInterface,
-		mcpClient: mcpClient,
+		llm:          llmInterface,
+		mcpClient:    mcpClient,
 		systemPrompt: systemPrompt,
 		capabilities: AgentCapabilities{
-			SupportsStreaming:       true,
-			SupportedInputModalities: modelInfo.InputModalities,
+			SupportsStreaming:         true,
+			SupportedInputModalities:  modelInfo.InputModalities,
 			SupportedOutputModalities: modelInfo.OutputModalities,
 		},
 	}, nil

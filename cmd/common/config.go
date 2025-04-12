@@ -14,6 +14,7 @@ import (
 
 // ConfigFormat represents the format of a configuration file.
 type ConfigFormat string
+
 const (
 	// ConfigFormatJSON represents JSON format.
 	ConfigFormatJSON ConfigFormat = "json"
@@ -32,7 +33,6 @@ type ServerConfig struct {
 	config.ServerConfig
 	LLMConfig config.LLMConfig `json:"llmConfig" yaml:"llmConfig"`
 }
-
 
 // ClientConfig represents the configuration for the A2A client.
 type ClientConfig struct {
@@ -110,10 +110,10 @@ func SaveConfig[T any](config T, filePath string) error {
 		return fmt.Errorf("unsupported configuration format: %s", format)
 	}
 
-// Write file
-if err := os.WriteFile(filePath, data, 0644); err != nil {
-return fmt.Errorf("failed to write configuration file: %w", err)
-}
+	// Write file
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write configuration file: %w", err)
+	}
 
 	return nil
 }
@@ -164,7 +164,7 @@ func ConvertToAgentCard(config config.AgentCardConfig) *a2a.AgentCard {
 	// Convert skills
 	card.Skills = make([]a2a.AgentSkill, len(config.Skills))
 	for i, skill := range config.Skills {
-			agentSkill := a2a.AgentSkill{
+		agentSkill := a2a.AgentSkill{
 			ID:   skill.ID,
 			Name: skill.Name,
 		}
@@ -184,8 +184,8 @@ func ConvertToAgentCard(config config.AgentCardConfig) *a2a.AgentCard {
 	// Convert capabilities
 	if config.Capabilities != nil {
 		card.Capabilities = &a2a.AgentCapabilities{
-			SupportsStreaming:       config.Capabilities.SupportsStreaming,
-			SupportsSessions:        config.Capabilities.SupportsSessions,
+			SupportsStreaming:        config.Capabilities.SupportsStreaming,
+			SupportsSessions:         config.Capabilities.SupportsSessions,
 			SupportsPushNotification: config.Capabilities.SupportsPushNotification,
 		}
 	}
@@ -220,9 +220,9 @@ func DefaultServerConfig() ServerConfig {
 			A2APathPrefix: "/a2a",
 			LogLevel:      "info",
 			AgentCard: config.AgentCardConfig{
-				A2AVersion: "1.0",
-				ID:         "go-a2a-server",
-				Name:       "Go A2A Server",
+				A2AVersion:  "1.0",
+				ID:          "go-a2a-server",
+				Name:        "Go A2A Server",
 				Description: "A standalone A2A server implemented in Go",
 				Skills: []config.SkillConfig{
 					{
@@ -232,8 +232,8 @@ func DefaultServerConfig() ServerConfig {
 					},
 				},
 				Capabilities: &config.CapabilitiesConfig{
-					SupportsStreaming:       true,
-					SupportsSessions:        true,
+					SupportsStreaming:        true,
+					SupportsSessions:         true,
 					SupportsPushNotification: true,
 				},
 			},
@@ -249,9 +249,10 @@ func DefaultLLMConfig() config.LLMConfig {
 		APIKey:       "",
 		SystemPrompt: "",
 		BaseUrl:      "",
-		Options: map[string]interface{}{"temperature": 0.7},
+		Options:      map[string]interface{}{"temperature": 0.7},
 	}
 }
+
 // DefaultClientConfig returns a default client configuration.
 func DefaultClientConfig() ClientConfig {
 	return ClientConfig{

@@ -106,8 +106,10 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request){
-	if handler, ok := s.config.AgentEngine.(interface{ HandleRequest(http.ResponseWriter, *http.Request) }); ok {
+func (s *Server) handleAgentEngineRequest(w http.ResponseWriter, r *http.Request) {
+	if handler, ok := s.config.AgentEngine.(interface {
+		HandleRequest(http.ResponseWriter, *http.Request)
+	}); ok {
 		handler.HandleRequest(w, r)
 	} else {
 		http.Error(w, "AgentEngine does not support HandleRequest", http.StatusNotImplemented)
@@ -126,4 +128,5 @@ func (s *Server) Stop(ctx context.Context) error {
 	fmt.Println("A2A server stopped.")
 	return nil
 }
+
 // Note: The handleA2ARequest method is now implemented in handler.go

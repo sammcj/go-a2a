@@ -24,7 +24,7 @@ type Config struct {
 	AgentEngine   AgentEngine    // The agent engine implementation
 	AuthValidator AuthValidator  // Optional authentication validator function
 	// TODO: Add fields for optional TLS config, middleware, SSE config, etc.
-	gollmOptions  []gollm.Option
+	gollmOptions []gollm.Option
 }
 
 // Option is a function that modifies the server configuration.
@@ -33,9 +33,9 @@ type Option func(*Config)
 // DefaultConfig returns a Config with default values.
 func DefaultConfig() Config {
 	return Config{
-		ListenAddress: ":8080",                   // Default listen address
-		A2APathPrefix: "/a2a",                    // Default A2A path prefix
-		AgentCardPath: DefaultAgentCardPath,      // Default agent card path
+		ListenAddress: ":8080",              // Default listen address
+		A2APathPrefix: "/a2a",               // Default A2A path prefix
+		AgentCardPath: DefaultAgentCardPath, // Default agent card path
 		// AgentCard is required, must be provided via WithAgentCard
 		// TaskManager defaults to InMemoryTaskManager if TaskHandler is provided
 		// TaskHandler is required, must be provided via WithTaskHandler

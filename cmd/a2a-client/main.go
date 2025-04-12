@@ -19,12 +19,12 @@ import (
 )
 
 var (
-	configFile    = flag.String("config", "", "Path to configuration file (JSON or YAML)")
-	agentURL      = flag.String("url", "", "URL of the A2A agent")
-	outputFormat  = flag.String("output", "pretty", "Output format (json, pretty)")
-	authHeader    = flag.String("auth", "", "Authentication header (format: 'Name: Value')")
-	timeout       = flag.Duration("timeout", 30*time.Second, "Request timeout")
-	interactive   = flag.Bool("interactive", false, "Interactive mode")
+	configFile   = flag.String("config", "", "Path to configuration file (JSON or YAML)")
+	agentURL     = flag.String("url", "", "URL of the A2A agent")
+	outputFormat = flag.String("output", "pretty", "Output format (json, pretty)")
+	authHeader   = flag.String("auth", "", "Authentication header (format: 'Name: Value')")
+	timeout      = flag.Duration("timeout", 30*time.Second, "Request timeout")
+	interactive  = flag.Bool("interactive", false, "Interactive mode")
 )
 
 func main() {

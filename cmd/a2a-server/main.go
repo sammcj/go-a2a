@@ -35,94 +35,94 @@ func main() {
 	logger.Info("Starting A2A server")
 
 	// Load configuration
-var cfg common.ServerConfig
-if *configFile != "" {
-logger.Info("Loading configuration from %s", *configFile)
-loadedConfig, err := common.LoadConfig[common.ServerConfig](*configFile)
-if err != nil {
-logger.Fatal("Failed to load configuration: %v", err)
-}
-cfg = *loadedConfig
-} else {
-// If no config file is specified, use default values
-cfg = common.DefaultServerConfig()
-if *listenAddress != "" {
-cfg.ListenAddress = *listenAddress
-}
-if *agentCardPath != "" {
-cfg.AgentCardPath = *agentCardPath
-}
-if *a2aPathPrefix != "" {
-cfg.A2APathPrefix = *a2aPathPrefix
-}
-if *logLevel != "" {
-cfg.LogLevel = *logLevel
-}
-if *pluginPath != "" {
-cfg.PluginPath = *pluginPath
-}
-}
+	var cfg common.ServerConfig
+	if *configFile != "" {
+		logger.Info("Loading configuration from %s", *configFile)
+		loadedConfig, err := common.LoadConfig[common.ServerConfig](*configFile)
+		if err != nil {
+			logger.Fatal("Failed to load configuration: %v", err)
+		}
+		cfg = *loadedConfig
+	} else {
+		// If no config file is specified, use default values
+		cfg = common.DefaultServerConfig()
+		if *listenAddress != "" {
+			cfg.ListenAddress = *listenAddress
+		}
+		if *agentCardPath != "" {
+			cfg.AgentCardPath = *agentCardPath
+		}
+		if *a2aPathPrefix != "" {
+			cfg.A2APathPrefix = *a2aPathPrefix
+		}
+		if *logLevel != "" {
+			cfg.LogLevel = *logLevel
+		}
+		if *pluginPath != "" {
+			cfg.PluginPath = *pluginPath
+		}
+	}
 
-// Load LLM config
-var llmConfig config.LLMConfig
-if cfg.LLMConfig.Provider != "" {
-llmConfig = cfg.LLMConfig
-} else {
-llmConfig = common.DefaultLLMConfig()
-}
+	// Load LLM config
+	var llmConfig config.LLMConfig
+	if cfg.LLMConfig.Provider != "" {
+		llmConfig = cfg.LLMConfig
+	} else {
+		llmConfig = common.DefaultLLMConfig()
+	}
 
-gollmOpts, err := server.NewGollmOptionsFromConfig(llmConfig)
-if err != nil {
-logger.Fatal("Failed to create gollm options: %v", err)
-}
+	gollmOpts, err := server.NewGollmOptionsFromConfig(llmConfig)
+	if err != nil {
+		logger.Fatal("Failed to create gollm options: %v", err)
+	}
 
-var agentCard *config.AgentCardConfig
-if *agentCardFile != "" {
-logger.Info("Loading agent card from %s", *agentCardFile)
-loadedCard, err := common.LoadConfig[config.AgentCardConfig](*agentCardFile)
-if err != nil {
-logger.Fatal("Failed to load agent card: %v", err)
-}
-agentCard = loadedCard
-} else {
-// If no agent card file is specified, use the agent card from the server configuration
-agentCard = &cfg.ServerConfig.AgentCard
-}
+	var agentCard *config.AgentCardConfig
+	if *agentCardFile != "" {
+		logger.Info("Loading agent card from %s", *agentCardFile)
+		loadedCard, err := common.LoadConfig[config.AgentCardConfig](*agentCardFile)
+		if err != nil {
+			logger.Fatal("Failed to load agent card: %v", err)
+		}
+		agentCard = loadedCard
+	} else {
+		// If no agent card file is specified, use the agent card from the server configuration
+		agentCard = &cfg.ServerConfig.AgentCard
+	}
 
 	// Convert agent card config to A2A format
 	a2aAgentCard := common.ConvertToAgentCard(*agentCard)
 
-// Load plugins
-var taskHandler task.Handler
-if cfg.PluginPath != "" {
-logger.Info("Loading plugins from %s", cfg.PluginPath)
-plugins, err := common.LoadPlugins(cfg.PluginPath)
-if err != nil {
-logger.Fatal("Failed to load plugins: %v", err)
-}
+	// Load plugins
+	var taskHandler task.Handler
+	if cfg.PluginPath != "" {
+		logger.Info("Loading plugins from %s", cfg.PluginPath)
+		plugins, err := common.LoadPlugins(cfg.PluginPath)
+		if err != nil {
+			logger.Fatal("Failed to load plugins: %v", err)
+		}
 
-if len(plugins) == 0 {
-logger.Warn("No plugins found, using built-in echo plugin")
-taskHandler = common.NewEchoPlugin().GetTaskHandler()
-} else {
-logger.Info("Loaded %d plugins", len(plugins))
-taskHandler = common.MergeTaskHandlers(plugins)
-}
-} else {
-// Use built-in echo plugin
-logger.Info("No plugin path specified, using built-in echo plugin")
-taskHandler = common.NewEchoPlugin().GetTaskHandler()
-}
+		if len(plugins) == 0 {
+			logger.Warn("No plugins found, using built-in echo plugin")
+			taskHandler = common.NewEchoPlugin().GetTaskHandler()
+		} else {
+			logger.Info("Loaded %d plugins", len(plugins))
+			taskHandler = common.MergeTaskHandlers(plugins)
+		}
+	} else {
+		// Use built-in echo plugin
+		logger.Info("No plugin path specified, using built-in echo plugin")
+		taskHandler = common.NewEchoPlugin().GetTaskHandler()
+	}
 
-// Create server options
-opts := []server.Option{
-server.WithListenAddress(cfg.ListenAddress),
-server.WithAgentCard(a2aAgentCard),
-server.WithAgentCardPath(cfg.AgentCardPath),
-server.WithA2APathPrefix(cfg.A2APathPrefix),
-server.WithTaskHandler(taskHandler),
-server.WithGollmOptions(gollmOpts),
-}
+	// Create server options
+	opts := []server.Option{
+		server.WithListenAddress(cfg.ListenAddress),
+		server.WithAgentCard(a2aAgentCard),
+		server.WithAgentCardPath(cfg.AgentCardPath),
+		server.WithA2APathPrefix(cfg.A2APathPrefix),
+		server.WithTaskHandler(taskHandler),
+		server.WithGollmOptions(gollmOpts),
+	}
 
 	// Create server
 	srv, err := server.NewServer(opts...)
@@ -158,14 +158,14 @@ server.WithGollmOptions(gollmOpts),
 
 // saveDefaultConfig saves a default configuration file.
 func saveDefaultConfig(path string) error {
-cfg := common.DefaultServerConfig()
-return common.SaveConfig(cfg, path)
+	cfg := common.DefaultServerConfig()
+	return common.SaveConfig(cfg, path)
 }
 
 // saveDefaultAgentCard saves a default agent card file.
 func saveDefaultAgentCard(path string) error {
-cfg := common.DefaultServerConfig().ServerConfig.AgentCard
-return common.SaveConfig(cfg, path)
+	cfg := common.DefaultServerConfig().ServerConfig.AgentCard
+	return common.SaveConfig(cfg, path)
 }
 
 // ensureDirectory ensures that the directory exists.

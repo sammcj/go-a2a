@@ -19,19 +19,19 @@ type AuthConfig struct {
 
 // AgentCardConfig represents the configuration for an agent card.
 type AgentCardConfig struct {
-	A2AVersion       string                 `json:"a2aVersion" yaml:"a2aVersion"`
-	ID               string                 `json:"id" yaml:"id"`
-	Name             string                 `json:"name" yaml:"name"`
-	Description      string                 `json:"description,omitempty" yaml:"description,omitempty"`
-	IconURI          string                 `json:"iconUri,omitempty" yaml:"iconUri,omitempty"`
-	Provider         *ProviderConfig        `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Skills           []SkillConfig          `json:"skills" yaml:"skills"`
-	Capabilities     *CapabilitiesConfig    `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
-	Authentication   []AuthConfig           `json:"authentication,omitempty" yaml:"authentication,omitempty"`
-	ContactEmail     string                 `json:"contactEmail,omitempty" yaml:"contactEmail,omitempty"`
-	LegalInfoURI     string                 `json:"legalInfoUri,omitempty" yaml:"legalInfoUri,omitempty"`
-	HomepageURI      string                 `json:"homepageUri,omitempty" yaml:"homepageUri,omitempty"`
-	DocumentationURI string                 `json:"documentationUri,omitempty" yaml:"documentationUri,omitempty"`
+	A2AVersion       string              `json:"a2aVersion" yaml:"a2aVersion"`
+	ID               string              `json:"id" yaml:"id"`
+	Name             string              `json:"name" yaml:"name"`
+	Description      string              `json:"description,omitempty" yaml:"description,omitempty"`
+	IconURI          string              `json:"iconUri,omitempty" yaml:"iconUri,omitempty"`
+	Provider         *ProviderConfig     `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Skills           []SkillConfig       `json:"skills" yaml:"skills"`
+	Capabilities     *CapabilitiesConfig `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	Authentication   []AuthConfig        `json:"authentication,omitempty" yaml:"authentication,omitempty"`
+	ContactEmail     string              `json:"contactEmail,omitempty" yaml:"contactEmail,omitempty"`
+	LegalInfoURI     string              `json:"legalInfoUri,omitempty" yaml:"legalInfoUri,omitempty"`
+	HomepageURI      string              `json:"homepageUri,omitempty" yaml:"homepageUri,omitempty"`
+	DocumentationURI string              `json:"documentationUri,omitempty" yaml:"documentationUri,omitempty"`
 }
 
 // ProviderConfig represents the configuration for an agent provider.
@@ -51,8 +51,8 @@ type SkillConfig struct {
 
 // CapabilitiesConfig represents the configuration for agent capabilities.
 type CapabilitiesConfig struct {
-	SupportsStreaming       bool `json:"supportsStreaming" yaml:"supportsStreaming"`
-	SupportsSessions        bool `json:"supportsSessions" yaml:"supportsSessions"`
+	SupportsStreaming        bool `json:"supportsStreaming" yaml:"supportsStreaming"`
+	SupportsSessions         bool `json:"supportsSessions" yaml:"supportsSessions"`
 	SupportsPushNotification bool `json:"supportsPushNotification" yaml:"supportsPushNotification"`
 }
 

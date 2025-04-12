@@ -15,9 +15,9 @@ type EchoPlugin struct{}
 
 // GetTaskHandler returns the task handler function for the echo plugin.
 func (p *EchoPlugin) GetTaskHandler() task.Handler {
-return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
-// Create a channel for updates
-updateChan := make(chan task.YieldUpdate)
+	return func(ctx context.Context, taskCtx task.Context) (<-chan task.YieldUpdate, error) {
+		// Create a channel for updates
+		updateChan := make(chan task.YieldUpdate)
 
 		// Start a goroutine to handle the task
 		go func() {

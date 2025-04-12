@@ -198,10 +198,10 @@ func main() {
 	a2aServer, err := server.NewServer(
 		server.WithAgentCard(agentCard),
 		server.WithMCPToolAugmentedGollmAgent(
-			"ollama",                // provider
+			"ollama",                       // provider
 			"deepcoder:14b-preview-q4_K_M", // model
-			"",                      // API key (not needed for Ollama)
-			mcpClient,               // MCP client
+			"",                             // API key (not needed for Ollama)
+			mcpClient,                      // MCP client
 		),
 		server.WithListenAddress(":8080"),
 	)

@@ -152,10 +152,10 @@ func main() {
 	a2aServer, err := server.NewServer(
 		server.WithAgentCard(agentCard),
 		server.WithToolAugmentedGollmAgent(
-			"ollama",                // provider
+			"ollama",                       // provider
 			"deepcoder:14b-preview-q4_K_M", // model
-			"",                      // API key (not needed for Ollama)
-			tools,                   // tools
+			"",                             // API key (not needed for Ollama)
+			tools,                          // tools
 		),
 		server.WithListenAddress(":8080"),
 	)
