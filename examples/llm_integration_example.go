@@ -5,12 +5,93 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sammcj/go-a2a/a2a"
 	"github.com/sammcj/go-a2a/client"
 	"github.com/sammcj/go-a2a/server"
 )
+
+// WeatherTool is a simple tool that provides weather information
+type WeatherTool struct{}
+
+// Name returns the name of the tool
+func (t *WeatherTool) Name() string {
+	return "weather"
+}
+
+// Description returns a description of the tool
+func (t *WeatherTool) Description() string {
+	return "Get weather information for a location"
+}
+
+// Execute executes the tool with the given parameters
+func (t *WeatherTool) Execute(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	// In a real implementation, this would call a weather API
+	location, ok := params["location"].(string)
+	if !ok {
+		return nil, fmt.Errorf("location parameter is required")
+	}
+
+	// Mock weather data
+	weatherData := map[string]interface{}{
+		"location":    location,
+		"temperature": 22,
+		"condition":   "Sunny",
+		"humidity":    65,
+		"wind":        "10 km/h",
+	}
+
+	return weatherData, nil
+}
+
+// CalculatorTool is a simple tool that performs calculations
+type CalculatorTool struct{}
+
+// Name returns the name of the tool
+func (t *CalculatorTool) Name() string {
+	return "calculator"
+}
+
+// Description returns a description of the tool
+func (t *CalculatorTool) Description() string {
+	return "Perform mathematical calculations"
+}
+
+// Execute executes the tool with the given parameters
+func (t *CalculatorTool) Execute(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	expression, ok := params["expression"].(string)
+	if !ok {
+		return nil, fmt.Errorf("expression parameter is required")
+	}
+
+	// This is a very simple calculator that only handles addition
+	// In a real implementation, you would use a proper expression parser
+	parts := strings.Split(expression, "+")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("only addition is supported")
+	}
+
+	// Parse the numbers
+	var a, b float64
+	_, err := fmt.Sscanf(strings.TrimSpace(parts[0]), "%f", &a)
+	if err != nil {
+		return nil, fmt.Errorf("invalid first number: %w", err)
+	}
+	_, err = fmt.Sscanf(strings.TrimSpace(parts[1]), "%f", &b)
+	if err != nil {
+		return nil, fmt.Errorf("invalid second number: %w", err)
+	}
+
+	// Calculate the result
+	result := a + b
+
+	return map[string]interface{}{
+		"expression": expression,
+		"result":     result,
+	}, nil
+}
 
 func main() {
 	// Create an agent card
@@ -19,14 +100,24 @@ func main() {
 		ID:         "llm-agent",
 		Name:       "LLM Agent",
 		Description: func() *string {
-			s := "An intelligent agent powered by an LLM"
+			s := "An intelligent agent powered by an LLM with tool capabilities"
 			return &s
 		}(),
 		Skills: []a2a.AgentSkill{
 			{
-				ID:   "general-assistance",
-				Name: "General Assistance",
+				ID:          "general-assistance",
+				Name:        "General Assistance",
 				Description: "Provides helpful responses to general questions and requests",
+			},
+			{
+				ID:          "weather-info",
+				Name:        "Weather Information",
+				Description: "Provides weather information for a location",
+			},
+			{
+				ID:          "calculator",
+				Name:        "Calculator",
+				Description: "Performs mathematical calculations",
 			},
 		},
 		Capabilities: &a2a.AgentCapabilities{
@@ -34,14 +125,20 @@ func main() {
 		},
 	}
 
-	// Create and start the server with a gollm-based agent
+	// Define tools
+	tools := []server.Tool{
+		&WeatherTool{},
+		&CalculatorTool{},
+	}
+
+	// Create and start the server with a tool-augmented gollm agent
 	a2aServer, err := server.NewServer(
 		server.WithAgentCard(agentCard),
-		server.WithBasicGollmAgent(
+		server.WithToolAugmentedGollmAgent(
 			"ollama",                // provider
-			"deepcoder:14b-preview-q4_K_M",                // model
+			"deepcoder:14b-preview-q4_K_M", // model
 			"",                      // API key (not needed for Ollama)
-			"You are a helpful assistant that responds to user queries in a concise and accurate manner.",
+			tools,                   // tools
 		),
 		server.WithListenAddress(":8080"),
 	)
@@ -67,13 +164,26 @@ func main() {
 		log.Fatalf("Failed to create A2A client: %v", err)
 	}
 
+	// Example 1: Ask about Go for backend development
+	runExample(a2aClient, "What are the benefits of using Go for backend development?")
+
+	// Example 2: Ask about the weather (should use the weather tool)
+	runExample(a2aClient, "What's the weather like in London?")
+
+	// Example 3: Ask for a calculation (should use the calculator tool)
+	runExample(a2aClient, "Calculate 123.45 + 67.89")
+}
+
+func runExample(a2aClient *client.Client, query string) {
+	fmt.Printf("\n\n--- Example: %s ---\n\n", query)
+
 	// Create a message
 	message := a2a.Message{
 		Role: a2a.RoleUser,
 		Parts: []a2a.Part{
 			a2a.TextPart{
 				Type: "text",
-				Text: "What are the benefits of using Go for backend development?",
+				Text: query,
 			},
 		},
 	}

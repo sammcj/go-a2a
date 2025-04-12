@@ -21,7 +21,7 @@ type Config struct {
 	TaskHandler   TaskHandler    // The application-specific task handler logic
 	AgentEngine   AgentEngine    // The agent engine implementation
 	AuthValidator AuthValidator  // Optional authentication validator function
-	// TODO: Add fields for TLS config, middleware, SSE config, etc.
+	// TODO: Add fields for optional TLS config, middleware, SSE config, etc.
 }
 
 // Option is a function that modifies the server configuration.
