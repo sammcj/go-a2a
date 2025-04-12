@@ -175,31 +175,37 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 
 ## 9. Roadmap / Next Steps
 
-1.  **Phase 1: Core Types & Basic Client/Server:**
+1.  **Phase 1: Core Types & Basic Client/Server:** ✅ COMPLETED
     *   ✅ Define all core Go structs (`a2a.go`).
     *   ✅ Define A2A specific error types (`errors.go`).
     *   ✅ Implement basic HTTP server with JSON-RPC request/response handling (`server/server.go`, `server/handler.go`).
     *   ✅ Implement in-memory `TaskManager` (`server/task_manager.go`).
     *   ✅ Implement Agent Card serving (`server/agent_card.go`).
     *   ✅ Implement basic client methods (`SendTask`, `GetTask`, `CancelTask`) without SSE/Push/Auth (`client/client.go`, `client/options.go`).
-    *   ⬜ Basic unit tests.
-2.  **Phase 2: SSE Implementation:**
+    *   ✅ Basic unit tests.
+2.  **Phase 2: SSE Implementation:** ✅ COMPLETED
     *   ✅ Add server-side SSE handling for `sendSubscribe`/`resubscribe`.
     *   ✅ Add client-side SSE handling.
     *   ✅ Integrate SSE with `TaskManager` updates.
-    *   ⬜ SSE-specific tests.
-3.  **Phase 3: Authentication & Push Notifications:**
-    *   Implement server-side auth middleware hooks/interfaces.
-    *   Implement client-side auth configuration.
-    *   Implement server logic for sending push notifications.
-    *   Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
-    *   Auth and push notification tests.
-4.  **Phase 4: Refinement & Documentation:**
-    *   Add comprehensive examples.
-    *   Write detailed package documentation.
-    *   Refine APIs based on usage.
-    *   Improve test coverage.
-    *   Consider helper utilities (e.g., validating `AgentCard`s).
+    *   ✅ SSE-specific tests.
+3.  **Phase 3: Authentication & Push Notifications:** ✅ COMPLETED
+    *   ✅ Implement server-side auth middleware hooks/interfaces (`server/middleware/auth.go`).
+    *   ✅ Implement client-side auth configuration (`client/options.go`).
+    *   ✅ Implement server logic for sending push notifications (`server/push_notification.go`).
+    *   ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
+    *   ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
+    *   ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
+4.  **Phase 4: Refinement & Documentation:** 🔄 IN PROGRESS
+    *   ✅ Create comprehensive README with architecture overview and usage examples.
+    *   ⬜ Add more comprehensive examples:
+        *   ⬜ Simple server example
+        *   ⬜ Simple client example
+        *   ⬜ Integration with MCP example
+    *   ⬜ Write detailed package documentation (godoc).
+    *   ⬜ Refine APIs based on usage feedback.
+    *   ⬜ Improve test coverage.
+    *   ⬜ Add helper utilities (e.g., validating `AgentCard`s).
+    *   ⬜ Create CI/CD pipeline for testing and releases.
 
 ## 10. Example: Web UI Integration (Conceptual)
 
