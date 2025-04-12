@@ -194,3 +194,4 @@ docker run --entrypoint /app/bin/a2a-client go-a2a --url http://localhost:8080 c
 
 ```bash
 docker-compose up
+```
