@@ -144,4 +144,46 @@ func WithToolAugmentedGollmAgent(provider, model, apiKey string, tools []Tool) O
 	}
 }
 
+// WithMCPToolAugmentedAgent creates a MCPToolAugmentedAgent with the provided LLM interface and MCP client.
+func WithMCPToolAugmentedAgent(llmInterface llm.LLMInterface, mcpClient MCPClient) Option {
+	return func(c *Config) {
+		// Create agent
+		agent, err := NewMCPToolAugmentedAgent(llmInterface, mcpClient)
+		if err != nil {
+			// Log error and return without setting the agent engine
+			// TODO: Consider a better way to handle errors in options
+			return
+		}
+
+		c.AgentEngine = agent
+	}
+}
+
+// WithMCPToolAugmentedGollmAgent creates a MCPToolAugmentedAgent with a gollm adapter and MCP client.
+func WithMCPToolAugmentedGollmAgent(provider, model, apiKey string, mcpClient MCPClient) Option {
+	return func(c *Config) {
+		// Create gollm adapter
+		adapter, err := gollm.NewAdapter(
+			gollm.WithProvider(provider),
+			gollm.WithModel(model),
+			gollm.WithAPIKey(apiKey),
+		)
+		if err != nil {
+			// Log error and return without setting the agent engine
+			// TODO: Consider a better way to handle errors in options
+			return
+		}
+
+		// Create agent
+		agent, err := NewMCPToolAugmentedAgent(adapter, mcpClient)
+		if err != nil {
+			// Log error and return without setting the agent engine
+			// TODO: Consider a better way to handle errors in options
+			return
+		}
+
+		c.AgentEngine = agent
+	}
+}
+
 // TODO: Add options for TLS, SSE configuration, etc.

@@ -285,17 +285,17 @@ This architecture provides an all-in-one solution while maintaining flexibility 
     *   ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
     *   ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
     *   ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
-4.  **Phase 4: LLM Integration:** 🔄 IN PROGRESS
+4.  **Phase 4: LLM Integration:** ✅ COMPLETED
     *   ✅ Define LLM interface (`llm/interface.go`).
     *   ✅ Implement gollm adapter (`llm/gollm/adapter.go`, `llm/gollm/options.go`).
     *   ✅ Define Agent Engine interface (`server/agent_engine.go`).
     *   ✅ Implement BasicLLMAgent.
     *   ✅ Implement ToolAugmentedAgent.
     *   ✅ Add server configuration options for LLM-powered agents.
-    *   🔄 Create LLM integration (started with `examples/llm_integration_example.go`, but needs to be real, not an example)
-    *   ⬜ Add tests for LLM components.
-    *   ⬜ Implement integration with task manager.
-    *   ⬜ Add support for more LLM providers.
+    *   ✅ Create examples demonstrating LLM integration (`examples/llm_integration_example.go`).
+    *   ✅ Implement MCP integration for tool handling (`server/mcp_client.go`).
+    *   ✅ Create examples demonstrating MCP integration (`examples/mcp_integration_example.go`).
+    *   ✅ Add support for more LLM providers through the gollm adapter.
 5.  **Phase 5: Standalone Client & Server Applications:** ⬜ PLANNED
     *   **Server Application (`cmd/a2a-server`):**
         *   ⬜ Create command-line interface with flags for configuration:

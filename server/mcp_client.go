@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/sammcj/go-a2a/a2a"
+	"github.com/sammcj/go-a2a/llm"
 )
 
 // MCPClient defines the interface for interacting with MCP servers.
@@ -241,14 +244,14 @@ func NewMCPClient(config MCPClientConfig) (MCPClient, error) {
 
 // MCPToolAugmentedAgent implements AgentEngine using an LLM with MCP tools.
 type MCPToolAugmentedAgent struct {
-	llm          LLMInterface
+	llm          llm.LLMInterface
 	mcpClient    MCPClient
 	systemPrompt string
 	capabilities AgentCapabilities
 }
 
 // NewMCPToolAugmentedAgent creates a new MCPToolAugmentedAgent.
-func NewMCPToolAugmentedAgent(llmInterface LLMInterface, mcpClient MCPClient) (*MCPToolAugmentedAgent, error) {
+func NewMCPToolAugmentedAgent(llmInterface llm.LLMInterface, mcpClient MCPClient) (*MCPToolAugmentedAgent, error) {
 	// Get model info to determine capabilities
 	modelInfo := llmInterface.GetModelInfo()
 
@@ -290,7 +293,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 		userMessage := taskCtx.UserMessage
 		var userText string
 		for _, part := range userMessage.Parts {
-			if textPart, ok := part.(TextPart); ok {
+			if textPart, ok := part.(a2a.TextPart); ok {
 				userText = textPart.Text
 				break
 			}
@@ -298,11 +301,11 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 
 		// Send a working status update
 		updateChan <- StatusUpdate{
-			State: TaskStateWorking,
+			State: a2a.TaskStateWorking,
 		}
 
 		// Process the message with the LLM
-		chunkChan, errChan := a.llm.GenerateStream(ctx, userText, WithSystemPrompt(a.systemPrompt))
+		chunkChan, errChan := a.llm.GenerateStream(ctx, userText, llm.WithSystemPrompt(a.systemPrompt))
 
 		// Buffer to accumulate the response
 		var responseBuffer string
@@ -326,17 +329,17 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 				}
 
 				// Send a working status update with the chunk
-				responseMessage := Message{
-					Role: RoleAgent,
-					Parts: []Part{
-						TextPart{
+				responseMessage := a2a.Message{
+					Role: a2a.RoleAgent,
+					Parts: []a2a.Part{
+						a2a.TextPart{
 							Type: "text",
 							Text: chunk.Text,
 						},
 					},
 				}
 				updateChan <- StatusUpdate{
-					State:   TaskStateWorking,
+					State:   a2a.TaskStateWorking,
 					Message: &responseMessage,
 				}
 
@@ -346,17 +349,17 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 					result, err := a.mcpClient.CallTool(ctx, toolCall.Tool, toolCall.Params)
 					if err != nil {
 						// Send a failed status update
-						errorMessage := Message{
-							Role: RoleSystem,
-							Parts: []Part{
-								TextPart{
+						errorMessage := a2a.Message{
+							Role: a2a.RoleSystem,
+							Parts: []a2a.Part{
+								a2a.TextPart{
 									Type: "text",
 									Text: fmt.Sprintf("Failed to execute tool %q: %v", toolCall.Tool, err),
 								},
 							},
 						}
 						updateChan <- StatusUpdate{
-							State:   TaskStateFailed,
+							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
 						return
@@ -366,25 +369,25 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 					resultStr, err := formatToolResult(result)
 					if err != nil {
 						// Send a failed status update
-						errorMessage := Message{
-							Role: RoleSystem,
-							Parts: []Part{
-								TextPart{
+						errorMessage := a2a.Message{
+							Role: a2a.RoleSystem,
+							Parts: []a2a.Part{
+								a2a.TextPart{
 									Type: "text",
 									Text: fmt.Sprintf("Failed to format tool result: %v", err),
 								},
 							},
 						}
 						updateChan <- StatusUpdate{
-							State:   TaskStateFailed,
+							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
 						return
 					}
 
-					// Send the tool result as an artifact
-					artifact := Artifact{
-						Part: TextPart{
+					// Send the tool result as an artifact update
+					updateChan <- ArtifactUpdate{
+						Part: a2a.TextPart{
 							Type: "text",
 							Text: resultStr,
 						},
@@ -392,75 +395,74 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 							"tool": toolCall.Tool,
 						},
 					}
-					updateChan <- artifact
 
 					// Process the tool result with the LLM
 					prompt := fmt.Sprintf("I executed the tool %q with the parameters %v and got the following result:\n\n%s\n\nPlease continue helping the user based on this result.", toolCall.Tool, toolCall.Params, resultStr)
-					response, err := a.llm.Generate(ctx, prompt, WithSystemPrompt(a.systemPrompt))
+					response, err := a.llm.Generate(ctx, prompt, llm.WithSystemPrompt(a.systemPrompt))
 					if err != nil {
 						// Send a failed status update
-						errorMessage := Message{
-							Role: RoleSystem,
-							Parts: []Part{
-								TextPart{
+						errorMessage := a2a.Message{
+							Role: a2a.RoleSystem,
+							Parts: []a2a.Part{
+								a2a.TextPart{
 									Type: "text",
 									Text: fmt.Sprintf("Failed to process tool result: %v", err),
 								},
 							},
 						}
 						updateChan <- StatusUpdate{
-							State:   TaskStateFailed,
+							State:   a2a.TaskStateFailed,
 							Message: &errorMessage,
 						}
 						return
 					}
 
 					// Send the response
-					responseMessage := Message{
-						Role: RoleAgent,
-						Parts: []Part{
-							TextPart{
+					responseMessage := a2a.Message{
+						Role: a2a.RoleAgent,
+						Parts: []a2a.Part{
+							a2a.TextPart{
 								Type: "text",
 								Text: response,
 							},
 						},
 					}
 					updateChan <- StatusUpdate{
-						State:   TaskStateWorking,
+						State:   a2a.TaskStateWorking,
 						Message: &responseMessage,
 					}
 				}
 
 			case err := <-errChan:
 				// Error occurred during generation
-				errorMessage := Message{
-					Role: RoleSystem,
-					Parts: []Part{
-						TextPart{
+				errorMessage := a2a.Message{
+					Role: a2a.RoleSystem,
+					Parts: []a2a.Part{
+						a2a.TextPart{
 							Type: "text",
 							Text: fmt.Sprintf("Failed to generate response: %v", err),
 						},
 					},
 				}
 				updateChan <- StatusUpdate{
-					State:   TaskStateFailed,
+					State:   a2a.TaskStateFailed,
 					Message: &errorMessage,
 				}
 				return
 
 			case <-ctx.Done():
 				// Context cancelled
-				errorMessage := Message{
-					Role: RoleSystem,
-					Parts: []Part{
-						TextPart{
+				errorMessage := a2a.Message{
+					Role: a2a.RoleSystem,
+					Parts: []a2a.Part{
+						a2a.TextPart{
 							Type: "text",
 							Text: "Task cancelled",
 						},
 					},
 				}
 				updateChan <- StatusUpdate{
-					State:   TaskStateCancelled,
+					State:   a2a.TaskStateCancelled,
 					Message: &errorMessage,
 				}
 				return
@@ -469,7 +471,7 @@ func (a *MCPToolAugmentedAgent) ProcessTask(ctx context.Context, taskCtx TaskCon
 
 		// Send a completed status update
 		updateChan <- StatusUpdate{
-			State: TaskStateCompleted,
+			State: a2a.TaskStateCompleted,
 		}
 	}()
 

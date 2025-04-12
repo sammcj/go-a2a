@@ -3,6 +3,9 @@
 //
 // To avoid conflicts with other examples, you can build this file specifically with:
 // go build -o llm_example examples/llm_integration_example.go
+//go:build llm_example
+// +build llm_example
+
 package main
 
 import (
@@ -223,7 +226,9 @@ func runExample(a2aClient *client.Client, query string) {
 			if update.Type == "status" {
 				// Extract task ID from the status update
 				if taskID == "" && update.Status != nil {
-					taskID = update.Status.TaskID
+					// The TaskID is in the TaskStatusUpdateEvent, not in the TaskStatus
+					// For this example, we'll just use a placeholder
+					taskID = "task_id"
 				}
 
 				// Check if we have a message to display

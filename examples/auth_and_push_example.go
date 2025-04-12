@@ -1,3 +1,6 @@
+//go:build auth_and_push_example
+// +build auth_and_push_example
+
 package main
 
 import (
