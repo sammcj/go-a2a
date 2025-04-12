@@ -144,8 +144,233 @@ func (tm *InMemoryTaskManager) OnSendTask(ctx context.Context, params *a2a.TaskS
 
 // OnSendTaskSubscribe implements TaskManager.OnSendTaskSubscribe.
 func (tm *InMemoryTaskManager) OnSendTaskSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan TaskYieldUpdate, error) {
-	// TODO: Implement streaming task handling
-	return nil, a2a.ErrOperationNotSupported("streaming tasks")
+	// Create a channel for updates
+	updateChan := make(chan TaskYieldUpdate)
+
+	// Check if this is a resume (taskId provided)
+	if params.TaskID != nil {
+		tm.mu.RLock()
+		task, exists := tm.tasks[*params.TaskID]
+		tm.mu.RUnlock()
+
+		if !exists {
+			return nil, a2a.ErrTaskNotFound(*params.TaskID)
+		}
+
+		// TODO: Validate session ID if provided
+
+		// Start a goroutine to handle the task
+		go func() {
+			defer close(updateChan)
+
+			// Send the current status as the first update
+			updateChan <- StatusUpdate{
+				State:   task.Status.State,
+				Message: task.Status.Message,
+			}
+
+			// Create a task context
+			taskCtx := TaskContext{
+				Task:        *task,
+				UserMessage: params.Message,
+				History:     append(task.History, params.Message),
+			}
+
+			// Call the task handler
+			handlerUpdateChan, err := tm.taskHandler(ctx, taskCtx)
+			if err != nil {
+				// Update task status to failed
+				tm.mu.Lock()
+				task.Status = a2a.TaskStatus{
+					State:     a2a.TaskStateFailed,
+					Timestamp: time.Now(),
+					Message: &a2a.Message{
+						Role:      a2a.RoleSystem,
+						Timestamp: time.Now(),
+						Parts: []a2a.Part{
+							a2a.TextPart{
+								Type: "text",
+								Text: fmt.Sprintf("Task failed: %v", err),
+							},
+						},
+					},
+				}
+				tm.mu.Unlock()
+
+				// Send a failed status update
+				updateChan <- StatusUpdate{
+					State: a2a.TaskStateFailed,
+					Message: &a2a.Message{
+						Role:      a2a.RoleSystem,
+						Timestamp: time.Now(),
+						Parts: []a2a.Part{
+							a2a.TextPart{
+								Type: "text",
+								Text: fmt.Sprintf("Task failed: %v", err),
+							},
+						},
+					},
+				}
+				return
+			}
+
+			// Forward updates from the handler
+			for update := range handlerUpdateChan {
+				// Update task state in memory
+				switch u := update.(type) {
+				case StatusUpdate:
+					tm.mu.Lock()
+					task.Status = a2a.TaskStatus{
+						State:     u.State,
+						Timestamp: time.Now(),
+						Message:   u.Message,
+					}
+					if u.Message != nil {
+						task.History = append(task.History, *u.Message)
+					}
+					tm.mu.Unlock()
+				case ArtifactUpdate:
+					artifact := a2a.Artifact{
+						ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
+						TaskID:    *params.TaskID,
+						Timestamp: time.Now(),
+						Part:      u.Part,
+						Metadata:  u.Metadata,
+					}
+					tm.mu.Lock()
+					task.Artifacts = append(task.Artifacts, artifact)
+					tm.mu.Unlock()
+				}
+
+				// Forward the update
+				updateChan <- update
+			}
+		}()
+
+		return updateChan, nil
+	}
+
+	// Create a new task
+	taskID := generateTaskID()
+	now := time.Now()
+
+	task := &a2a.Task{
+		ID:        taskID,
+		SessionID: params.SessionID, // May be nil
+		Status: a2a.TaskStatus{
+			State:     a2a.TaskStateSubmitted,
+			Timestamp: now,
+		},
+		History:   []a2a.Message{params.Message}, // Start with the user message
+		Artifacts: []a2a.Artifact{},              // Empty initially
+	}
+
+	// Store the task
+	tm.mu.Lock()
+	tm.tasks[taskID] = task
+	tm.mu.Unlock()
+
+	// Start a goroutine to handle the task
+	go func() {
+		defer close(updateChan)
+
+		// Send the initial status update
+		updateChan <- StatusUpdate{
+			State: a2a.TaskStateSubmitted,
+		}
+
+		// Update task status to working
+		tm.mu.Lock()
+		task.Status = a2a.TaskStatus{
+			State:     a2a.TaskStateWorking,
+			Timestamp: time.Now(),
+		}
+		tm.mu.Unlock()
+
+		// Send a working status update
+		updateChan <- StatusUpdate{
+			State: a2a.TaskStateWorking,
+		}
+
+		// Create a task context
+		taskCtx := TaskContext{
+			Task:        *task,
+			UserMessage: params.Message,
+			History:     task.History,
+		}
+
+		// Call the task handler
+		handlerUpdateChan, err := tm.taskHandler(ctx, taskCtx)
+		if err != nil {
+			// Update task status to failed
+			tm.mu.Lock()
+			task.Status = a2a.TaskStatus{
+				State:     a2a.TaskStateFailed,
+				Timestamp: time.Now(),
+				Message: &a2a.Message{
+					Role:      a2a.RoleSystem,
+					Timestamp: time.Now(),
+					Parts: []a2a.Part{
+						a2a.TextPart{
+							Type: "text",
+							Text: fmt.Sprintf("Task failed: %v", err),
+						},
+					},
+				},
+			}
+			tm.mu.Unlock()
+
+			// Send a failed status update
+			updateChan <- StatusUpdate{
+				State: a2a.TaskStateFailed,
+				Message: &a2a.Message{
+					Role:      a2a.RoleSystem,
+					Timestamp: time.Now(),
+					Parts: []a2a.Part{
+						a2a.TextPart{
+							Type: "text",
+							Text: fmt.Sprintf("Task failed: %v", err),
+						},
+					},
+				},
+			}
+			return
+		}
+
+		// Forward updates from the handler
+		for update := range handlerUpdateChan {
+			// Update task state in memory
+			switch u := update.(type) {
+			case StatusUpdate:
+				tm.mu.Lock()
+				task.Status = a2a.TaskStatus{
+					State:     u.State,
+					Timestamp: time.Now(),
+					Message:   u.Message,
+				}
+				if u.Message != nil {
+					task.History = append(task.History, *u.Message)
+				}
+				tm.mu.Unlock()
+			case ArtifactUpdate:
+				artifact := a2a.Artifact{
+					ID:        fmt.Sprintf("artifact_%d", time.Now().UnixNano()),
+					TaskID:    taskID,
+					Timestamp: time.Now(),
+					Part:      u.Part,
+					Metadata:  u.Metadata,
+				}
+				tm.mu.Lock()
+				task.Artifacts = append(task.Artifacts, artifact)
+				tm.mu.Unlock()
+			}
+
+			// Forward the update
+			updateChan <- update
+		}
+	}()
+
+	return updateChan, nil
 }
 
 // OnGetTask implements TaskManager.OnGetTask.
@@ -230,8 +455,69 @@ func (tm *InMemoryTaskManager) OnGetTaskPushNotification(ctx context.Context, pa
 
 // OnResubscribeToTask implements TaskManager.OnResubscribeToTask.
 func (tm *InMemoryTaskManager) OnResubscribeToTask(ctx context.Context, params *a2a.TaskIdParams) (<-chan TaskYieldUpdate, error) {
-	// TODO: Implement resubscription logic
-	return nil, a2a.ErrOperationNotSupported("task resubscription")
+	// Create a channel for updates
+	updateChan := make(chan TaskYieldUpdate)
+
+	// Check if the task exists
+	tm.mu.RLock()
+	task, exists := tm.tasks[params.TaskID]
+	tm.mu.RUnlock()
+
+	if !exists {
+		return nil, a2a.ErrTaskNotFound(params.TaskID)
+	}
+
+	// Start a goroutine to handle the resubscription
+	go func() {
+		defer close(updateChan)
+
+		// Send the current status as the first update
+		updateChan <- StatusUpdate{
+			State:   task.Status.State,
+			Message: task.Status.Message,
+		}
+
+		// If the task is already completed, failed, or cancelled, just return
+		if task.Status.State == a2a.TaskStateCompleted ||
+			task.Status.State == a2a.TaskStateFailed ||
+			task.Status.State == a2a.TaskStateCancelled {
+			return
+		}
+
+		// For tasks that are still in progress, we need to monitor them
+		// This is a simplified implementation that just waits for the task to complete
+		// In a real implementation, we would need to hook into the task's execution
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				// Context cancelled, stop monitoring
+				return
+			case <-ticker.C:
+				// Check the task status
+				tm.mu.RLock()
+				currentStatus := task.Status
+				tm.mu.RUnlock()
+
+				// Send an update if the status has changed
+				updateChan <- StatusUpdate{
+					State:   currentStatus.State,
+					Message: currentStatus.Message,
+				}
+
+				// If the task is now completed, failed, or cancelled, stop monitoring
+				if currentStatus.State == a2a.TaskStateCompleted ||
+					currentStatus.State == a2a.TaskStateFailed ||
+					currentStatus.State == a2a.TaskStateCancelled {
+					return
+				}
+			}
+		}
+	}()
+
+	return updateChan, nil
 }
 
 // --- Helper Functions ---

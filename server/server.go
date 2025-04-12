@@ -11,7 +11,7 @@ type Server struct {
 	config      Config
 	httpServer  *http.Server
 	taskManager TaskManager // Interface for task management logic
-	// TODO: Add other dependencies like AgentCard provider, SSE manager etc.
+	sseManager  *SSEManager // Manager for SSE connections
 }
 
 // NewServer creates a new A2A Server instance.
@@ -35,6 +35,7 @@ func NewServer(opts ...Option) (*Server, error) {
 	s := &Server{
 		config:      cfg,
 		taskManager: cfg.TaskManager,
+		sseManager:  NewSSEManager(),
 	}
 
 	// Setup HTTP routing (basic for now)
@@ -46,7 +47,8 @@ func NewServer(opts ...Option) (*Server, error) {
 	// Register main A2A endpoint
 	mux.HandleFunc(cfg.A2APathPrefix, s.handleA2ARequest)
 
-	// TODO: Add SSE endpoint (/a2a/sse or similar)
+	// Register SSE endpoint
+	mux.HandleFunc(cfg.A2APathPrefix+"/sse", s.handleSSERequest)
 
 	s.httpServer = &http.Server{
 		Addr:    cfg.ListenAddress,

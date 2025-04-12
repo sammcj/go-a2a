@@ -16,7 +16,8 @@ import (
 
 // Client is an A2A client for interacting with A2A servers.
 type Client struct {
-	config Config
+	config    Config
+	sseClient *SSEClient
 }
 
 // NewClient creates a new A2A client.
@@ -42,8 +43,12 @@ func NewClient(opts ...Option) (*Client, error) {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 
+	// Create SSE client
+	sseClient := NewSSEClient(cfg.HTTPClient, cfg.BaseURL, cfg.AuthHeaders)
+
 	return &Client{
-		config: cfg,
+		config:    cfg,
+		sseClient: sseClient,
 	}, nil
 }
 
@@ -238,6 +243,18 @@ func (c *Client) GetTaskPushNotification(ctx context.Context, taskID string) (*a
 	}
 
 	return &config, nil
+}
+
+// SendSubscribe sends a task to the A2A server and subscribes to updates via SSE.
+// It returns a channel for receiving task updates and an error channel.
+func (c *Client) SendSubscribe(ctx context.Context, params *a2a.TaskSendParams) (<-chan TaskUpdate, <-chan error) {
+	return c.sseClient.SubscribeToTask(ctx, params)
+}
+
+// Resubscribe resubscribes to task updates via SSE.
+// It returns a channel for receiving task updates and an error channel.
+func (c *Client) Resubscribe(ctx context.Context, taskID string, lastEventID string) (<-chan TaskUpdate, <-chan error) {
+	return c.sseClient.ResubscribeToTask(ctx, taskID, lastEventID)
 }
 
 // sendJSONRPCRequest sends a JSON-RPC request to the A2A server and unmarshals the result.

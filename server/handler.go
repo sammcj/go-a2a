@@ -54,6 +54,14 @@ func (s *Server) handleA2ARequest(w http.ResponseWriter, r *http.Request) {
 		s.handleTaskPushNotificationSet(ctx, w, r, &request)
 	case "tasks/pushNotification/get":
 		s.handleTaskPushNotificationGet(ctx, w, r, &request)
+	case "tasks/sendSubscribe":
+		// Redirect to SSE endpoint
+		http.Redirect(w, r, r.URL.Path+"/sse", http.StatusTemporaryRedirect)
+		return
+	case "tasks/resubscribe":
+		// Redirect to SSE endpoint
+		http.Redirect(w, r, r.URL.Path+"/sse", http.StatusTemporaryRedirect)
+		return
 	default:
 		writeJSONRPCError(w, r, a2a.ErrMethodNotFound(request.Method), request.ID)
 	}
