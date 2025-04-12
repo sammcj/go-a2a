@@ -2,49 +2,211 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/sammcj/go-a2a.svg)](https://pkg.go.dev/github.com/sammcj/go-a2a)
 
-A Go implementation of the Agent-to-Agent (A2A) protocol, enabling Go applications to act as A2A agents or interact with them.
+A comprehensive Go implementation of the Agent-to-Agent (A2A) protocol, enabling seamless communication between AI agents through a standardized interface.
 
-## Overview
+## What is go-a2a?
 
-The Agent-to-Agent (A2A) protocol is designed to facilitate communication between AI agents. This library provides both server and client implementations of the protocol in Go, allowing developers to:
+**go-a2a** is a complete toolkit for building and connecting AI agents using the Agent-to-Agent (A2A) protocol in Go. It provides:
 
-- Create A2A agents that can receive and process tasks
-- Build client applications that can interact with A2A agents
-- Implement authentication and push notification mechanisms
-- Handle streaming task updates via Server-Sent Events (SSE)
+- **A2A Server**: Create agents that can receive, process, and respond to tasks
+- **A2A Client**: Build applications that can communicate with A2A-compatible agents
+- **Standalone Applications**: Use the included command-line tools without writing code
+- **LLM Integration**: Connect to language models like OpenAI GPT or local Ollama models
+- **MCP Integration**: Leverage Model Context Protocol (MCP) tools and resources
 
-- [go-a2a: Agent-to-Agent Protocol Implementation in Go](#go-a2a-agent-to-agent-protocol-implementation-in-go)
-	- [Overview](#overview)
-	- [Architecture](#architecture)
-		- [Core Types (`a2a` package)](#core-types-a2a-package)
-		- [Server (`server` package)](#server-server-package)
-		- [Client (`client` package)](#client-client-package)
-	- [Getting Started](#getting-started)
-		- [Installation](#installation)
-		- [Creating an A2A Server](#creating-an-a2a-server)
-		- [Using the A2A Client](#using-the-a2a-client)
-	- [Authentication](#authentication)
-		- [Server-side Authentication](#server-side-authentication)
-		- [Client-side Authentication](#client-side-authentication)
-	- [Push Notifications](#push-notifications)
-		- [Setting Up Push Notifications (Client)](#setting-up-push-notifications-client)
-		- [Receiving Push Notifications (Server)](#receiving-push-notifications-server)
-	- [Server-Sent Events (SSE)](#server-sent-events-sse)
-		- [Streaming Task Updates (Server)](#streaming-task-updates-server)
-		- [Receiving Streaming Updates (Client)](#receiving-streaming-updates-client)
-	- [Examples](#examples)
-	- [LLM Integration](#llm-integration)
-		- [Architecture](#architecture-1)
-		- [Key Components](#key-components)
-		- [Implementation](#implementation)
-		- [Supported LLM Providers](#supported-llm-providers)
-		- [Advanced Features](#advanced-features)
-	- [Standalone Applications](#standalone-applications)
-		- [A2A Server](#a2a-server)
-		- [A2A Client](#a2a-client)
-		- [Docker Support](#docker-support)
-	- [Development Status](#development-status)
-	- [License](#license)
+Whether you're building a simple echo agent, a complex AI assistant, or integrating with existing agent ecosystems, go-a2a provides the building blocks you need.
+
+## Key Features
+
+- **Full A2A Protocol Support**: Implements the complete A2A specification
+- **Flexible Architecture**: Modular design with clean interfaces for customization
+- **Streaming Updates**: Real-time task updates via Server-Sent Events (SSE)
+- **Authentication**: Built-in support for various authentication methods
+- **Push Notifications**: Configurable webhooks for task status updates
+- **LLM Integration**: Direct connection to language models via gollm
+- **Standalone Tools**: Command-line applications for server and client operations
+- **Docker Support**: Ready-to-use Docker images and docker-compose configuration
+
+## System Architecture
+
+The go-a2a library is structured into several interconnected components:
+
+```mermaid
+graph TD
+    classDef core fill:#EFF3FF,stroke:#9ECAE1,color:#3182BD
+    classDef server fill:#E5F5E0,stroke:#31A354,color:#31A354
+    classDef client fill:#FEE0D2,stroke:#E6550D,color:#E6550D
+    classDef llm fill:#E6E6FA,stroke:#756BB1,color:#756BB1
+    classDef apps fill:#FFF5EB,stroke:#FD8D3C,color:#E6550D
+
+    Core[Core Types<br>a2a package]:::core
+    Server[Server<br>server package]:::server
+    Client[Client<br>client package]:::client
+    LLM[LLM Integration<br>llm package]:::llm
+    Apps[Standalone Apps<br>cmd package]:::apps
+
+    Core --> Server
+    Core --> Client
+    Server --> LLM
+    Core --> Apps
+    Server --> Apps
+    Client --> Apps
+
+    subgraph "Library Components"
+        Core
+        Server
+        Client
+        LLM
+    end
+
+    subgraph "Applications"
+        Apps
+    end
+```
+
+### Component Relationships
+
+```mermaid
+graph TD
+    classDef core fill:#EFF3FF,stroke:#9ECAE1,color:#3182BD
+    classDef server fill:#E5F5E0,stroke:#31A354,color:#31A354
+    classDef client fill:#FEE0D2,stroke:#E6550D,color:#E6550D
+    classDef external fill:#F2F0F7,stroke:#BCBDDC,color:#756BB1
+
+    A2AClient[A2A Client]:::client -->|Sends Tasks| A2AServer[A2A Server]:::server
+    A2AServer -->|Processes Tasks| TaskManager[Task Manager]:::server
+    TaskManager -->|Invokes| TaskHandler[Task Handler]:::server
+    TaskHandler -->|Uses| LLMAdapter[LLM Adapter]:::server
+    LLMAdapter -->|Connects to| LLMProvider[LLM Provider]:::external
+    A2AServer -->|Serves| AgentCard[Agent Card]:::core
+    A2AServer -->|Sends| PushNotifications[Push Notifications]:::server
+    A2AServer -->|Streams Updates| SSE[Server-Sent Events]:::server
+    SSE -->|Received by| A2AClient
+
+    subgraph "Server Components"
+        A2AServer
+        TaskManager
+        TaskHandler
+        LLMAdapter
+        PushNotifications
+        SSE
+    end
+
+    subgraph "Client Components"
+        A2AClient
+    end
+
+    subgraph "External Systems"
+        LLMProvider
+    end
+```
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as A2A Client
+    participant Server as A2A Server
+    participant TaskMgr as Task Manager
+    participant Handler as Task Handler
+    participant LLM as LLM Provider
+
+    Client->>Server: Send Task (JSON-RPC)
+    Server->>TaskMgr: Create Task
+    TaskMgr->>Handler: Process Task
+
+    alt With LLM Integration
+        Handler->>LLM: Generate Response
+        LLM-->>Handler: LLM Response
+    end
+
+    Handler-->>TaskMgr: Status Update (Working)
+    TaskMgr-->>Server: Status Update
+    Server-->>Client: Status Update (SSE)
+
+    Handler-->>TaskMgr: Status Update (Completed)
+    TaskMgr-->>Server: Status Update
+    Server-->>Client: Status Update (SSE)
+
+    opt Push Notifications Configured
+        Server->>External: Send Push Notification
+    end
+```
+
+## Use Case Scenarios
+
+### Scenario 1: AI Assistant with Local LLM
+
+**Components Used:**
+- A2A Server with LLM Integration
+- A2A Client (CLI or custom application)
+- Ollama for local LLM inference
+
+**Description:**
+Deploy an AI assistant that runs entirely on your local machine. The A2A server connects to Ollama to process natural language requests, while clients can interact with it through a command-line interface or custom application. This setup provides privacy and control over the AI assistant, as all processing happens locally.
+
+**Example Flow:**
+1. Start the A2A server with Ollama integration
+2. Connect to the server using the A2A client
+3. Send natural language requests to the assistant
+4. Receive responses generated by the local LLM
+
+### Scenario 2: Enterprise Agent Network
+
+**Components Used:**
+- Multiple A2A Servers with different specializations
+- A2A Client for orchestration
+- Push Notifications for asynchronous workflows
+- Authentication for secure access
+
+**Description:**
+Create a network of specialized agents within an enterprise environment. Each agent handles specific tasks (data analysis, content generation, customer support, etc.) and can communicate with other agents. A central orchestration client coordinates workflows across agents, with push notifications enabling asynchronous processing for long-running tasks.
+
+**Example Flow:**
+1. User submits a request to the orchestration client
+2. Client determines which specialized agents are needed
+3. Tasks are distributed to appropriate agents
+4. Agents process tasks and may delegate subtasks to other agents
+5. Results are collected and presented to the user
+6. Push notifications keep stakeholders informed of progress
+
+### Scenario 3: Tool-Augmented Research Assistant
+
+**Components Used:**
+- A2A Server with LLM Integration
+- Tool-Augmented Agent
+- MCP Integration for external tools
+- Streaming updates for real-time interaction
+
+**Description:**
+Build a research assistant that combines LLM capabilities with specialized tools. The agent can search the web, access databases, analyze data, and generate visualizations to assist with research tasks. Streaming updates provide real-time feedback during complex operations.
+
+**Example Flow:**
+1. Researcher submits a query to the assistant
+2. LLM analyzes the query and determines required tools
+3. Agent executes searches using MCP-connected tools
+4. Data is processed and analyzed
+5. Results are synthesized into a coherent response
+6. Streaming updates show progress throughout the process
+
+### Scenario 4: Customer Support System
+
+**Components Used:**
+- A2A Server with authentication
+- Multiple client interfaces (web, mobile, chat)
+- Push notifications for status updates
+- LLM integration for natural language understanding
+
+**Description:**
+Deploy a customer support system that handles inquiries across multiple channels. The A2A server processes requests using LLM capabilities to understand customer needs, while push notifications keep customers informed about their support tickets. Authentication ensures that only authorized users can access sensitive information.
+
+**Example Flow:**
+1. Customer submits a support request through a client interface
+2. Request is authenticated and sent to the A2A server
+3. LLM analyzes the request and generates an initial response
+4. For complex issues, the request is escalated to human support
+5. Push notifications update the customer on ticket status
+6. Resolution is delivered back to the customer's preferred channel
 
 ## Architecture
 
@@ -541,6 +703,39 @@ llmAdapter, err := gollm.NewAdapter(
 
 5. **Custom Prompting**: Configure system prompts and directives for consistent agent behavior
 
+## MCP Integration
+
+The go-a2a library includes support for the Model Context Protocol (MCP), allowing A2A agents to leverage MCP tools and resources:
+
+```mermaid
+graph TD
+    classDef a2a fill:#E5F5E0,stroke:#31A354,color:#31A354
+    classDef mcp fill:#FEE0D2,stroke:#E6550D,color:#E6550D
+    classDef external fill:#F2F0F7,stroke:#BCBDDC,color:#756BB1
+
+    A2AServer[A2A Server]:::a2a -->|Uses| MCPClient[MCP Client]:::mcp
+    MCPClient -->|Connects to| MCPServer[MCP Server]:::external
+    MCPServer -->|Provides| Tools[Tools]:::external
+    MCPServer -->|Provides| Resources[Resources]:::external
+
+    subgraph "go-a2a Components"
+        A2AServer
+        MCPClient
+    end
+
+    subgraph "External MCP Components"
+        MCPServer
+        Tools
+        Resources
+    end
+```
+
+### Key Features
+
+1. **Tool Access**: A2A agents can use MCP tools for specialized capabilities
+2. **Resource Access**: A2A agents can access MCP resources for additional context
+3. **Seamless Integration**: MCP functionality is integrated directly into the A2A task handling flow
+
 ## Standalone Applications
 
 The library includes standalone server and client applications that can be used without writing any Go code:
@@ -597,6 +792,15 @@ docker-compose up
 
 For more information, see the [cmd/README.md](cmd/README.md) file.
 
+## What go-a2a Is Not
+
+While go-a2a provides a comprehensive implementation of the A2A protocol, it's important to understand its boundaries:
+
+- **Not an AI Model**: go-a2a is not an AI model itself, but rather a framework for connecting to and utilizing AI models
+- **Not a Complete Agent Solution**: While it provides the building blocks, you'll need to implement your own agent logic or connect to existing AI services
+- **Not a Web Framework**: Although it includes HTTP functionality, it's focused specifically on the A2A protocol rather than general web development
+- **Not a Database**: The default implementation uses in-memory storage; for production use with large volumes of tasks, you'll need to implement persistent storage
+
 ## Development Status
 
 The library is currently in active development. The following features have been implemented:
@@ -610,6 +814,7 @@ The library is currently in active development. The following features have been
 - ✅ Authentication middleware
 - ✅ Push notification support
 - ✅ LLM integration with gollm
+- ✅ MCP integration for tool access
 - ✅ Standalone server and client applications
 - ✅ Docker support
 
@@ -620,6 +825,8 @@ Future enhancements may include:
 - Additional helper utilities
 - Integration with other libraries and frameworks
 - Enhanced LLM integration with specialized agent templates
+- Persistent storage options
+- Monitoring and metrics endpoints
 
 ## License
 
