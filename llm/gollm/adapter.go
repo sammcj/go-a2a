@@ -4,7 +4,6 @@ package gollm
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/sammcj/go-a2a/llm"
 	"github.com/teilomillet/gollm"
@@ -12,7 +11,7 @@ import (
 
 // Adapter implements the LLM interface using the gollm library.
 type Adapter struct {
-	llmClient *gollm.LLM
+	llmClient gollm.LLM
 	modelInfo llm.LLMModelInfo
 }
 
@@ -24,25 +23,40 @@ func NewAdapter(opts ...Option) (*Adapter, error) {
 	}
 
 	// Create gollm client with the specified options
-	gollmOpts := []gollm.Option{
-		gollm.SetProvider(options.Provider),
-		gollm.SetModel(options.Model),
-		gollm.SetMaxTokens(options.MaxTokens),
-	}
+	var gollmOpts []func(*gollm.LLM)
+
+	// Set provider and model
+	gollmOpts = append(gollmOpts, func(l *gollm.LLM) {
+		l.Provider = options.Provider
+		l.Model = options.Model
+		l.MaxTokens = options.MaxTokens
+	})
 
 	// Add API key if provided (not needed for Ollama)
 	if options.APIKey != "" {
-		gollmOpts = append(gollmOpts, gollm.SetAPIKey(options.APIKey))
+		gollmOpts = append(gollmOpts, func(l *gollm.LLM) {
+			l.APIKey = options.APIKey
+		})
 	}
 
 	// Add memory if specified
 	if options.Memory > 0 {
-		gollmOpts = append(gollmOpts, gollm.SetMemory(options.Memory))
+		gollmOpts = append(gollmOpts, func(l *gollm.LLM) {
+			l.Memory = options.Memory
+		})
 	}
 
-	llmClient, err := gollm.NewLLM(gollmOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gollm client: %w", err)
+	// Create a new gollm LLM instance
+	var llmClient gollm.LLM
+
+	// Apply options
+	for _, opt := range gollmOpts {
+		opt(&llmClient)
+	}
+
+	// Initialize the LLM
+	if err := llmClient.Init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize gollm client: %w", err)
 	}
 
 	// Create model info
@@ -69,34 +83,24 @@ func (a *Adapter) Generate(ctx context.Context, prompt string, options ...llm.LL
 		opt(opts)
 	}
 
-	// Create gollm prompt
-	gollmPrompt := gollm.NewPrompt(prompt)
-
-	// Apply system prompt if provided
+	// Create a prompt with system instructions if provided
+	fullPrompt := prompt
 	if opts.SystemPrompt != "" {
-		gollmPrompt = gollm.NewPrompt(prompt,
-			gollm.WithDirectives(opts.SystemPrompt),
-		)
+		fullPrompt = opts.SystemPrompt + "\n\n" + prompt
 	}
 
-	// Apply structured output if requested
-	if opts.StructuredOutput != nil {
-		gollmPrompt = gollm.NewPrompt(prompt,
-			gollm.WithOutput(opts.StructuredOutput.Format),
-		)
+	// Set temperature if specified
+	if opts.Temperature > 0 {
+		a.llmClient.Temperature = opts.Temperature
+	}
+
+	// Set max tokens if specified
+	if opts.MaxTokens > 0 {
+		a.llmClient.MaxTokens = opts.MaxTokens
 	}
 
 	// Generate response
-	var response string
-	var err error
-
-	if opts.StructuredOutput != nil && opts.StructuredOutput.Schema != nil {
-		// Use JSON schema validation if provided
-		response, err = a.llmClient.Generate(ctx, gollmPrompt, gollm.WithJSONSchemaValidation())
-	} else {
-		response, err = a.llmClient.Generate(ctx, gollmPrompt)
-	}
-
+	response, err := a.llmClient.Completion(fullPrompt)
 	if err != nil {
 		return "", fmt.Errorf("gollm generation failed: %w", err)
 	}
@@ -112,14 +116,20 @@ func (a *Adapter) GenerateStream(ctx context.Context, prompt string, options ...
 		opt(opts)
 	}
 
-	// Create gollm prompt
-	gollmPrompt := gollm.NewPrompt(prompt)
-
-	// Apply system prompt if provided
+	// Create a prompt with system instructions if provided
+	fullPrompt := prompt
 	if opts.SystemPrompt != "" {
-		gollmPrompt = gollm.NewPrompt(prompt,
-			gollm.WithDirectives(opts.SystemPrompt),
-		)
+		fullPrompt = opts.SystemPrompt + "\n\n" + prompt
+	}
+
+	// Set temperature if specified
+	if opts.Temperature > 0 {
+		a.llmClient.Temperature = opts.Temperature
+	}
+
+	// Set max tokens if specified
+	if opts.MaxTokens > 0 {
+		a.llmClient.MaxTokens = opts.MaxTokens
 	}
 
 	// Create channels
@@ -132,17 +142,24 @@ func (a *Adapter) GenerateStream(ctx context.Context, prompt string, options ...
 		defer close(errChan)
 
 		// Use gollm's streaming capability
-		stream, err := a.llmClient.GenerateStream(ctx, gollmPrompt)
-		if err != nil {
-			errChan <- fmt.Errorf("failed to start gollm stream: %w", err)
-			return
-		}
+		streamChan := make(chan string)
+		errStreamChan := make(chan error)
+
+		go func() {
+			defer close(streamChan)
+			defer close(errStreamChan)
+
+			err := a.llmClient.CompletionStream(fullPrompt, streamChan)
+			if err != nil {
+				errStreamChan <- err
+			}
+		}()
 
 		// Process the stream
 		for {
-			chunk, err := stream.Recv()
-			if err != nil {
-				if err == io.EOF {
+			select {
+			case chunk, ok := <-streamChan:
+				if !ok {
 					// Stream completed successfully
 					chunkChan <- llm.LLMChunk{
 						Text:      "",
@@ -151,15 +168,21 @@ func (a *Adapter) GenerateStream(ctx context.Context, prompt string, options ...
 					return
 				}
 
+				// Send the chunk
+				chunkChan <- llm.LLMChunk{
+					Text:      chunk,
+					Completed: false,
+				}
+
+			case err := <-errStreamChan:
 				// Error occurred
 				errChan <- fmt.Errorf("gollm stream error: %w", err)
 				return
-			}
 
-			// Send the chunk
-			chunkChan <- llm.LLMChunk{
-				Text:      chunk,
-				Completed: false,
+			case <-ctx.Done():
+				// Context cancelled
+				errChan <- ctx.Err()
+				return
 			}
 		}
 	}()
