@@ -354,6 +354,37 @@ This architecture provides an all-in-one solution while maintaining flexibility 
     *   ⬜ Add helper utilities (e.g., validating `AgentCard`s).
     *   ⬜ Create Github Actions CI/CD pipeline for testing and releases with semver versioning.
 
+7.  **Phase 7: Future Enhancements:** ⬜ PLANNED
+    *   **Server Enhancements:**
+        *   ⬜ Implement monitoring endpoints:
+            *   ⬜ Health check endpoint
+            *   ⬜ Basic Metrics endpoint (Prometheus compatible)
+            *   ⬜ Basic Task status dashboard
+        *   ⬜ Add persistent storage options:
+            *   ⬜ File-based storage
+            *   ⬜ Database storage (SQL, NoSQL)
+        *   ⬜ Implement rate limiting and throttling
+        *   ⬜ Add support for distributed task processing
+        *   ⬜ Implement task history pruning and archiving
+    *   **Client Enhancements:**
+        *   ⬜ Implement interactive mode:
+            *   ⬜ TUI (Terminal User Interface) for task interaction
+            *   ⬜ History
+            *   ⬜ Live task status updates
+        *   ⬜ Add client-side caching
+        *   ⬜ Implement retry logic with backoff
+        *   ⬜ Add support for batch operations
+    *   **LLM Integration Enhancements:**
+        *   ⬜ Add support for more LLM providers
+        *   ⬜ Implement advanced prompt engineering techniques
+        *   ⬜ Add support for function calling
+        *   ⬜ Implement agent memory and context management
+        *   ⬜ Add support for multi-agent collaboration
+    *   **MCP Integration Enhancements:**
+        *   ⬜ Implement bidirectional A2A-MCP bridging
+        *   ⬜ Add support for MCP resource discovery
+        *   ⬜ Implement MCP tool registration
+
 ## 11. Example: Web UI Integration (Conceptual)
 
 This section outlines a *conceptual* approach for how a web-based administrative or monitoring UI could interact with an application built using the `go-a2a` library. **Note:** This administrative API is *not* part of the A2A protocol specification and would be implemented by the application developer *alongside* the core A2A server functionality provided by the `go-a2a` library. This would not be part of this project/repository codebase and the following information only serves as an example and something to keep in mind when developing the go-a2a project.
