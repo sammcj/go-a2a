@@ -157,12 +157,102 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 *   **Authentication:** Provide ways to configure authentication credentials (e.g., tokens) that the client will automatically add to outgoing request headers.
 *   **Configuration:** Functional options (`client.Option`) for configuration (base URL, HTTP client, timeout, auth credentials).
 
-## 7. Integration with `mcp-go`
+## 7. LLM Integration Architecture
+
+To provide an all-in-one solution while maintaining flexibility and loose coupling, the go-a2a library will include direct LLM integration capabilities through a modular architecture:
+
+### Core Components
+
+*   **LLM Interface:** A Go interface that defines standard methods for interacting with LLMs, such as generating text and streaming responses.
+*   **Agent Engine:** A Go interface that defines how an agent processes tasks, potentially using LLMs.
+*   **gollm Adapter:** The primary implementation of the LLM interface using the [gollm](https://github.com/teilomillet/gollm) library, which provides a unified API for interacting with various LLM providers.
+
+### Package Structure
+
+```
+go-a2a/
+├── llm/
+│   ├── interface.go       # LLM interface definition
+│   ├── options.go         # Common LLM options
+│   └── gollm/
+│       ├── adapter.go     # gollm adapter implementation
+│       └── options.go     # gollm-specific options
+├── server/
+│   ├── agent_engine.go    # Agent engine interface and implementations
+│   └── ...                # Other server components
+```
+
+### Key Interfaces
+
+```go
+// LLMInterface defines the interface for LLM interactions
+type LLMInterface interface {
+    // Generate generates text from a prompt
+    Generate(ctx context.Context, prompt string, options ...LLMOption) (string, error)
+
+    // GenerateStream streams text generation from a prompt
+    GenerateStream(ctx context.Context, prompt string, options ...LLMOption) (<-chan LLMChunk, <-chan error)
+
+    // GetModelInfo returns information about the LLM model
+    GetModelInfo() LLMModelInfo
+}
+
+// AgentEngine defines the interface for agent intelligence
+type AgentEngine interface {
+    // ProcessTask processes a task and returns a channel for updates
+    ProcessTask(ctx context.Context, taskCtx TaskContext) (<-chan TaskYieldUpdate, error)
+
+    // GetCapabilities returns the agent's capabilities
+    GetCapabilities() AgentCapabilities
+}
+```
+
+### gollm Adapter
+
+The gollm adapter will be the primary implementation of the LLM interface, focusing on support for:
+
+1. **Ollama**: For local model deployment and inference
+2. **OpenAI-compatible APIs**: For compatibility with various hosted services
+
+The adapter will provide a simple, unified interface for interacting with these providers while handling the complexities of different APIs, authentication methods, and response formats.
+
+### Agent Implementations
+
+The library will include default agent implementations that use the LLM interface:
+
+1. **BasicLLMAgent**: A simple agent that processes tasks using an LLM
+2. **ToolAugmentedAgent**: An agent that can use tools (e.g., weather API, calculator) in addition to an LLM
+
+### Configuration Options
+
+The server package will include configuration options for easily setting up LLM-powered agents:
+
+```go
+// Create a server with a basic gollm agent
+server.WithBasicGollmAgent(
+    "ollama",                 // provider
+    "llama3",                 // model
+    "",                       // API key (not needed for Ollama)
+    "You are a helpful assistant that responds to user queries.",
+)
+
+// Create a server with a tool-augmented gollm agent
+server.WithToolAugmentedGollmAgent(
+    "openai",                 // provider
+    "gpt-4o",                 // model
+    os.Getenv("OPENAI_API_KEY"),
+    []server.Tool{weatherTool, calculatorTool},
+)
+```
+
+This architecture provides an all-in-one solution while maintaining flexibility and loose coupling, allowing users to easily integrate LLMs into their A2A agents.
+
+## 8. Integration with `mcp-go`
 
 *   **Primary Integration:** An A2A agent (built with `go-a2a`) acting as an MCP client. The A2A task handling logic within the `go-a2a` server can instantiate and use an MCP client (potentially using `mcp-go` if it offers client capabilities, or another library) to call tools or read resources from MCP servers as part of fulfilling an A2A task. `go-a2a` itself will *not* depend directly on `mcp-go`.
 *   **Secondary (Future):** An application could potentially run both an `mcp-go` server and a `go-a2a` server in the same process, sharing underlying logic. An A2A `tasks/send` could potentially be mapped to trigger an `mcp-go` tool call internally. This is more complex and considered a future enhancement.
 
-## 8. Key Considerations
+## 9. Key Considerations
 
 *   **Error Handling:** Define Go error types that map clearly to the standard A2A JSON-RPC error codes (`TaskNotFound`, `InvalidParams`, etc.). Ensure handlers return these errors appropriately.
 *   **Concurrency:** Use goroutines for handling concurrent requests, SSE streams, and background task processing. Ensure thread safety in shared components like the `TaskManager` (e.g., using `sync.Mutex` or channels).
@@ -173,7 +263,7 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
 *   **Concurrent SSE:** An application needs to manage concurrent SSE connections acting as an A2A client, A2A server, and potentially MCP clients/servers simultaneously. The library must handle these distinct protocol streams (A2A vs. MCP) and connection lifecycles correctly, potentially requiring separate endpoints and handlers if serving both protocols.
 *   **Discovery Mechanisms:** Acknowledge the different discovery approaches. A2A uses pre-interaction discovery via fetching the `AgentCard` (typically from `/.well-known/agent.json`), which `go-a2a` must support (serving and fetching). MCP uses post-connection discovery via the `initialize` handshake, which is handled by the MCP client library (e.g., `mcp-go`) used *within* the A2A application, not directly by `go-a2a`.
 
-## 9. Roadmap / Next Steps
+## 10. Roadmap / Next Steps
 
 1.  **Phase 1: Core Types & Basic Client/Server:** ✅ COMPLETED
     *   ✅ Define all core Go structs (`a2a.go`).
@@ -195,7 +285,16 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
     *   ✅ Implement client/server methods for managing push notification config (`tasks/pushNotification/set`, `tasks/pushNotification/get`).
     *   ✅ Auth and push notification tests (`server/middleware/auth_test.go`, `server/push_notification_test.go`).
     *   ✅ Example demonstrating auth and push notifications (`examples/auth_and_push_example.go`).
-4.  **Phase 4: Standalone Client & Server Applications:** ⬜ PLANNED
+4.  **Phase 4: LLM Integration:** 🔄 IN PROGRESS
+    *   ⬜ Define LLM interface (`llm/interface.go`).
+    *   ⬜ Implement gollm adapter (`llm/gollm/adapter.go`).
+    *   ⬜ Define Agent Engine interface (`server/agent_engine.go`).
+    *   ⬜ Implement BasicLLMAgent.
+    *   ⬜ Implement ToolAugmentedAgent.
+    *   ⬜ Add server configuration options for LLM-powered agents.
+    *   ⬜ Create examples demonstrating LLM integration.
+    *   ⬜ Add tests for LLM components.
+5.  **Phase 5: Standalone Client & Server Applications:** ⬜ PLANNED
     *   **Server Application (`cmd/a2a-server`):**
         *   ⬜ Create command-line interface with flags for configuration:
             *   ⬜ Listen address and port
@@ -245,7 +344,7 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
         *   ⬜ Error handling and reporting
         *   ⬜ Documentation and examples
         *   ⬜ Installation scripts and packages
-5.  **Phase 5: Refinement & Documentation:** 🔄 IN PROGRESS
+6.  **Phase 6: Refinement & Documentation:** 🔄 IN PROGRESS
     *   ✅ Create comprehensive README with architecture overview and usage examples.
     *   ⬜ Write detailed package documentation (godoc).
     *   ⬜ Refine APIs based on usage feedback.
@@ -253,7 +352,7 @@ All structs will have `json:"..."` tags matching the A2A specification precisely
     *   ⬜ Add helper utilities (e.g., validating `AgentCard`s).
     *   ⬜ Create Github Actions CI/CD pipeline for testing and releases with semver versioning.
 
-## 10. Example: Web UI Integration (Conceptual)
+## 11. Example: Web UI Integration (Conceptual)
 
 This section outlines a *conceptual* approach for how a web-based administrative or monitoring UI could interact with an application built using the `go-a2a` library. **Note:** This administrative API is *not* part of the A2A protocol specification and would be implemented by the application developer *alongside* the core A2A server functionality provided by the `go-a2a` library. This would not be part of this project/repository codebase and the following information only serves as an example and something to keep in mind when developing the go-a2a project.
 
