@@ -470,17 +470,17 @@ func printTaskUpdate(update client.TaskUpdate, format string, logger *common.Log
 		fmt.Println(string(jsonData))
 	case "pretty":
 		// Print in a human-readable format
-		switch u := update.(type) {
-		case client.StatusUpdate:
-			fmt.Printf("Status Update: %s\n", u.Status.State)
-			if u.Status.Message != nil {
-				fmt.Printf("  Message: %s\n", getMessageText(u.Status.Message))
+		switch update.Type {
+		case "status":
+			fmt.Printf("Status Update: %s\n", update.Status.State)
+			if update.Status.Message != nil {
+				fmt.Printf("  Message: %s\n", getMessageText(update.Status.Message))
 			}
-		case client.ArtifactUpdate:
-			fmt.Printf("Artifact Update: %s\n", u.Artifact.ID)
-			fmt.Printf("  Type: %s\n", getPartDescription(u.Artifact.Part))
+		case "artifact":
+			fmt.Printf("Artifact Update: %s\n", update.Artifact.ID)
+			fmt.Printf("  Type: %s\n", getPartDescription(update.Artifact.Part))
 		default:
-			fmt.Printf("Unknown update type: %T\n", update)
+			fmt.Printf("Unknown update type: %s\n", update.Type)
 		}
 	default:
 		logger.Error("Unknown output format: %s", format)
