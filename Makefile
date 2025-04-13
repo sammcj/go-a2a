@@ -49,6 +49,10 @@ $(PLUGIN_BINARY): plugins/echo_plugin.go
 run-server: build-server
 	$(SERVER_BINARY) --config $(CONFIG_DIR)/server.json
 
+.PHONY: run-server-ollama
+run-server-ollama: build-server
+	PROVIDER=ollama MODEL=llama3 OPENAI_API_KEY=ollama $(SERVER_BINARY) --config $(CONFIG_DIR)/server.json
+
 .PHONY: run-client
 run-client: build-client
 	$(CLIENT_BINARY) --config $(CONFIG_DIR)/client.json card
@@ -97,6 +101,7 @@ help:
 	@echo "  build-client   Build client binary"
 	@echo "  build-plugin   Build plugin binary"
 	@echo "  run-server     Run server"
+	@echo "  run-server-ollama Run server with Ollama LLM"
 	@echo "  run-client     Run client"
 	@echo "  docker-build   Build Docker image"
 	@echo "  docker-run-server Run server in Docker"
