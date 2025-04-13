@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -177,13 +178,24 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 		TaskRouter: taskRouter,
 	}
 
-	// Create gollm options
-	gollmOptions := []gollm.Option{
-		gollm.WithProvider(config.LLMConfig.Provider),
-		gollm.WithModel(config.LLMConfig.Model),
+	// Create gollm options - if provider is OpenAI but no API key is set, fall back to Ollama
+	provider := config.LLMConfig.Provider
+	model := config.LLMConfig.Model
+
+	// Fall back to Ollama if using OpenAI without API key
+	if provider == "openai" && (config.LLMConfig.APIKey == "" || config.LLMConfig.APIKey == "${OPENAI_API_KEY}") {
+		log.Printf("Warning: No OpenAI API key set for %s. Falling back to Ollama...", config.AgentCard.ID)
+		provider = "ollama"
+		model = "llama3"
 	}
 
-	if config.LLMConfig.APIKey != "" {
+	gollmOptions := []gollm.Option{
+		gollm.WithProvider(provider),
+		gollm.WithModel(model),
+	}
+
+	// Only add API key if it's not an environment variable placeholder
+	if config.LLMConfig.APIKey != "" && !strings.HasPrefix(config.LLMConfig.APIKey, "${") {
 		gollmOptions = append(gollmOptions, gollm.WithAPIKey(config.LLMConfig.APIKey))
 	}
 
@@ -192,6 +204,7 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 		server.WithAgentCard(&config.AgentCard),
 		server.WithListenAddress(config.ListenAddress),
 		server.WithA2APathPrefix(config.A2APathPrefix),
+		server.WithGollmOptions(gollmOptions),
 	}
 
 	// Create task handler based on agent type
@@ -208,23 +221,21 @@ func CreateAgent(config *AgentConfig, taskRouter *TaskRouter) (*Agent, error) {
 		taskHandler = createDefaultAgentHandler(config.LLMConfig.SystemPrompt, gollmOptions)
 	}
 
-	// Create MCP client and add MCP tool augmented agent if MCP config is provided
+	// Add task handler
+	serverOptions = append(serverOptions, server.WithTaskHandler(taskHandler))
+
+	// Create MCP client if MCP config is provided
 	if len(config.MCPConfig.Tools) > 0 {
 		agent.MCPClient = NewCustomMCPClient(config.MCPConfig)
 
 		// Create gollm adapter for MCP tool augmented agent
-		adapter, err := gollm.NewAdapter(gollmOptions...)
+		mcpAdapter, err := gollm.NewAdapter(gollmOptions...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create gollm adapter: %w", err)
+			return nil, fmt.Errorf("failed to create gollm adapter for MCP: %w", err)
 		}
 
-		// Add MCP tool augmented agent with task handler as fallback
-		serverOptions = append(serverOptions,
-			server.WithMCPToolAugmentedAgent(adapter, agent.MCPClient),
-			server.WithTaskHandler(taskHandler))
-	} else {
-		// Add task handler
-		serverOptions = append(serverOptions, server.WithTaskHandler(taskHandler))
+		// Add MCP tool augmented agent
+		serverOptions = append(serverOptions, server.WithMCPToolAugmentedAgent(mcpAdapter, agent.MCPClient))
 	}
 
 	// Create server
