@@ -2,12 +2,13 @@
   "listenAddress": ":8080",
   "agentCardPath": "/.well-known/agent.json",
   "llmConfig": {
-    "provider": "openai",
+    "provider": "ollama",
+    "model": "llama3",
+    "apiKey": "",
     "options": {
       "temperature": 0.8
     },
-    "baseUrl": null,
-    "apiKey": null
+    "baseUrl": "http://localhost:11434"
   },
   "a2aPathPrefix": "/a2a",
   "logLevel": "info",
