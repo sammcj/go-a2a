@@ -1,5 +1,7 @@
 # go-a2a: Agent-to-Agent Protocol Implementation in Go
 
+**DRAFT / EARLY ALPHA - DO NOT USE IN PRODUCTION**
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/sammcj/go-a2a.svg)](https://pkg.go.dev/github.com/sammcj/go-a2a)
 
 A comprehensive Go implementation of the Agent-to-Agent (A2A) protocol, enabling seamless communication between AI agents through a standardized interface.
